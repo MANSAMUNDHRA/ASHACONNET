@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="3dp"
+    android:clickable="true"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Category Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tv_category_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Staff Salaries"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/color_text" />
+
+            <TextView
+                android:id="@+id/tv_category_percentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="60%"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/color_healthcare_primary"
+                android:background="@drawable/status_badge_background"
+                android:padding="4dp" />
+
+        </LinearLayout>
+
+        <!-- Amount Details -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ALLOCATED"
+                    android:textSize="10sp"
+                    android:textColor="@color/color_text_secondary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_allocated_amount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹80,00,000"
+                    android:textSize="14sp"
+                    android:textColor="@color/color_text" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SPENT"
+                    android:textSize="10sp"
+                    android:textColor="@color/color_text_secondary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_spent_amount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹48,00,000"
+                    android:textSize="14sp"
+                    android:textColor="@color/color_text" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="REMAINING"
+                    android:textSize="10sp"
+                    android:textColor="@color/color_text_secondary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_remaining_amount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹32,00,000"
+                    android:textSize="14sp"
+                    android:textColor="@color/color_success" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Progress Bar -->
+        <ProgressBar
+            android:id="@+id/progress_category"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:progress="60"
+            android:progressTint="@color/color_healthcare_primary"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Description -->
+        <TextView
+            android:id="@+id/tv_category_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Salaries and wages for all staff members"
+            android:textSize="12sp"
+            android:textColor="@color/color_text_secondary" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

@@ -1,0 +1,12 @@
+<!-- Add this to your app/src/main/res/values/themes.xml or styles.xml -->
+<resources>
+    <style name="Theme.SihAsha" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Enable edge-to-edge display -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
+
+</resources>

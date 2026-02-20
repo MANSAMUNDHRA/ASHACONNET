@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Healthcare Colors -->
+    <color name="color_healthcare_primary">#1F8385</color>
+    <color name="color_healthcare_secondary">#32B8CD</color>
+    <color name="color_healthcare_accent">#E68161</color>
+
+    <!-- Background Colors -->
+    <color name="color_background">#EEFBD3</color>
+    <color name="color_surface">#FFFFFD</color>
+    <color name="color_surface2">#E9FFFFFD</color>
+
+    <!-- Text Colors -->
+    <color name="color_text">#13343B</color>S
+    <color name="color_text_secondary">#626C71</color>
+    <color name="color_btn_primary_text">#FCFCF9</color>
+
+    <!-- Status Colors -->
+    <color name="color_success">#218D8F</color>
+    <color name="color_error">#C0152F</color>
+    <color name="color_warning">#A84B2F</color>
+    <color name="color_urgent">#C0152F</color>
+
+    <!-- Secondary Colors -->
+    <color name="color_secondary">#5E5240</color>
+    <color name="color_border">#5E5240</color>
+
+    <!-- Background Variants -->
+    <color name="color_bg_1">#3B82F614</color> <!-- Light blue -->
+    <color name="color_bg_2">#F59E0B14</color> <!-- Light yellow -->
+    <color name="color_bg_3">#22C55E14</color> <!-- Light green -->
+    <color name="color_bg_4">#1C3505</color>
+    <color name="color_success_light">#218D8F1A</color>
+    <color name="color_warning_light">#A84B2F1A</color>
+    <color name="color_urgent_bg">#C0152F1A</color>
+    <color name="color_card_border">#C0152F1A</color>
+
+
+    <!-- Standard Android Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+
+    <color name="color_divider">#E0E0E0</color>
+
+    <color name="color_healthcare_primary_light">#E3F2FD</color>
+
+    <color name="color_healthcare_primary_dark">#1565C0</color>
+    <color name="color_error_light">#FFEBEE</color>
+
+
+</resources>

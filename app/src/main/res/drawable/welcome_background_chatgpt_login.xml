@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1080dp"
+    android:height="1920dp"
+    android:viewportWidth="1080"
+    android:viewportHeight="1920">
+
+    <!-- Base gradient-like background -->
+    <path
+        android:fillColor="#c7ffb9"
+        android:pathData="M0,0h1080v1920h-1080z" />
+
+    <!-- Bright green polygonal layer -->
+    <path
+        android:fillColor="#FF00C853"
+        android:fillAlpha="0.35"
+        android:pathData="M0,0 L1080,0 L1080,500 L0,700 Z" />
+
+    <!-- Sky blue polygonal mid layer -->
+    <path
+        android:fillColor="#FF00B0FF"
+        android:fillAlpha="0.35"
+        android:pathData="M0,800 L400,600 L1080,950 L1080,1300 L400,1100 L0,1300 Z" />
+
+    <!-- Lower bright mix polygon -->
+    <path
+        android:fillColor="#FF1DE9B6"
+        android:fillAlpha="0.3"
+        android:pathData="M0,1400 L600,1200 L1080,1600 L1080,1920 L0,1920 Z" />
+
+    <!-- Circular accents -->
+    <path
+        android:fillColor="#308837"
+        android:pathData="M150,350a250,250 0 1,0 500,0a250,250 0 1,0 -500,0"
+        android:fillAlpha="0.1" />
+
+    <path
+        android:fillColor="#308837"
+        android:pathData="M700,1450a300,300 0 1,0 600,0a300,300 0 1,0 -600,0"
+        android:fillAlpha="0.08" />
+
+    <path
+        android:fillColor="#308837"
+        android:pathData="M850,400a180,180 0 1,0 360,0a180,180 0 1,0 -360,0"
+        android:fillAlpha="0.1" />
+
+    <!-- Smaller bright circles -->
+    <path
+        android:fillColor="#308837"
+        android:pathData="M200,1600a80,80 0 1,0 160,0a80,80 0 1,0 -160,0"
+        android:fillAlpha="0.2" />
+</vector>
