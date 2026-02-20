@@ -182,18 +182,21 @@ public class activity_dashboard extends AppCompatActivity {
         String[] tabKeys;
 
         if ("asha".equals(currentUser.getRole())) {
-            tabNames = new String[]{"Dashboard", "My Patients", "Inventory", "Visits"};
-            tabKeys = new String[]{"dashboard", "patients", "inventory", "visits"};
+            // Removed "Visits" from ASHA tabs - now only Dashboard, My Patients, Inventory
+            tabNames = new String[]{"Dashboard", "My Patients", "Inventory"};
+            tabKeys = new String[]{"dashboard", "patients", "inventory"};
         } else if ("phcadmin".equals(currentUser.getRole())) {
             tabNames = new String[]{"Dashboard", "All Patients", "Staff", "Inventory", "Financial", "Reports", "Training"};
             tabKeys = new String[]{"dashboard", "patients", "staff", "inventory", "financial", "reports", "training"};
 
         } else if ("phcdoctor".equals(currentUser.getRole())) {
-            tabNames = new String[]{"Dashboard", "Patients", "Referrals", "Inventory", "Reports"};
-            tabKeys = new String[]{"dashboard", "patients", "referrals", "inventory", "reports"};
+            // Removed "Referrals" from Doctor tabs
+            tabNames = new String[]{"Dashboard", "Patients", "Inventory", "Reports"};
+            tabKeys = new String[]{"dashboard", "patients", "inventory", "reports"};
         } else if ("phcnurse".equals(currentUser.getRole())) {
-            tabNames = new String[]{"Dashboard", "Patients", "Visits", "Inventory", "Immunization"};
-            tabKeys = new String[]{"dashboard", "patients", "visits", "inventory", "immunization"};
+            // Removed "Visits" and "Immunization" from Nurse tabs - now only Dashboard, Patients, Inventory
+            tabNames = new String[]{"Dashboard", "Patients", "Inventory"};
+            tabKeys = new String[]{"dashboard", "patients", "inventory"};
         } else {
             tabNames = new String[]{"Dashboard", "Patients", "Inventory"};
             tabKeys = new String[]{"dashboard", "patients", "inventory"};
@@ -271,10 +274,9 @@ public class activity_dashboard extends AppCompatActivity {
 
         // Define stats based on user role
         if ("asha".equals(currentUser.getRole())) {
-            addStatsCard("My Patients", "0", R.color.color_healthcare_primary, "patients");
-            addStatsCard("Pregnant Women", "0", R.color.color_success, "pregnant");
+            // Changed: Removed "Pregnant Women" and "This Month Visits", added "Patients" and "High Risk"
+            addStatsCard("Patients", "0", R.color.color_healthcare_primary, "patients");
             addStatsCard("High Risk", "0", R.color.color_error, "highrisk");
-            addStatsCard("This Month Visits", "0", R.color.color_warning, "visits");
         } else if ("phcadmin".equals(currentUser.getRole())) {
             addStatsCard("Total Patients", "0", R.color.color_healthcare_primary, "patients");
             addStatsCard("ASHA Workers", "0", R.color.color_success, "asha");
@@ -286,7 +288,7 @@ public class activity_dashboard extends AppCompatActivity {
             addStatsCard("Patients", "0", R.color.color_healthcare_primary, "patients");
             addStatsCard("Inventory", "0", R.color.color_success, "inventory");
             addStatsCard("Reports", "0", R.color.color_warning, "reports");
-            addStatsCard("Visits", "0", R.color.color_error, "visits");
+            // Removed "Visits" card for other roles
         }
 
         Log.d(TAG, "Stats grid setup completed");
@@ -306,7 +308,6 @@ public class activity_dashboard extends AppCompatActivity {
 
         cardView.setRadius(8);
         cardView.setCardElevation(4);
-        cardView.setClickable(true);
         cardView.setClickable(true);
         cardView.setFocusable(true);
 
@@ -351,16 +352,12 @@ public class activity_dashboard extends AppCompatActivity {
 
         switch (action) {
             case "patients":
-            case "pregnant":
             case "highrisk":
                 handleNavigation("patients");
                 break;
             case "inventory":
             case "lowstock":
                 handleNavigation("inventory");
-                break;
-            case "visits":
-                handleNavigation("visits");
                 break;
             case "asha":
                 handleNavigation("staff");
@@ -403,18 +400,8 @@ public class activity_dashboard extends AppCompatActivity {
             case "reports":
                 showReportsFragment();
                 break;
-
-            case "visits":
-                showVisitsFragment();
-                break;
-            case "referrals":
-                showReferralsFragment();
-                break;
             case "training":
                 showTrainingFragment();
-                break;
-            case "immunization":
-                showImmunizationFragment();
                 break;
             default:
                 Toast.makeText(this, viewKey.toUpperCase() + " feature coming soon!", Toast.LENGTH_SHORT).show();
@@ -497,27 +484,9 @@ public class activity_dashboard extends AppCompatActivity {
         showDashboard();
     }
 
-    private void showVisitsFragment() {
-        dashboardView.setVisibility(View.GONE);
-        Toast.makeText(this, "Visits feature coming soon!", Toast.LENGTH_SHORT).show();
-        showDashboard();
-    }
-
-    private void showReferralsFragment() {
-        dashboardView.setVisibility(View.GONE);
-        Toast.makeText(this, "Referrals feature coming soon!", Toast.LENGTH_SHORT).show();
-        showDashboard();
-    }
-
     private void showTrainingFragment() {
         dashboardView.setVisibility(View.GONE);
         Toast.makeText(this, "Training feature coming soon!", Toast.LENGTH_SHORT).show();
-        showDashboard();
-    }
-
-    private void showImmunizationFragment() {
-        dashboardView.setVisibility(View.GONE);
-        Toast.makeText(this, "Immunization feature coming soon!", Toast.LENGTH_SHORT).show();
         showDashboard();
     }
 
@@ -586,10 +555,9 @@ public class activity_dashboard extends AppCompatActivity {
 
             // Update stats grid values
             if ("asha".equals(currentUser.getRole())) {
+                // Updated: Now showing only Patients and High Risk
                 updateStatsValue("patients", patientCount);
-                updateStatsValue("pregnant", dataManager.getPregnantPatientsForASHA(currentUser.getId()).size());
                 updateStatsValue("highrisk", dataManager.getHighRiskPatientsForASHA(currentUser.getId()).size());
-                updateStatsValue("visits", 0); // Placeholder
             } else if ("phcadmin".equals(currentUser.getRole())) {
                 updateStatsValue("patients", dataManager.getAllPatients().size());
                 updateStatsValue("asha", dataManager.getASHAWorkers().size());
@@ -601,7 +569,6 @@ public class activity_dashboard extends AppCompatActivity {
                 updateStatsValue("patients", patientCount);
                 updateStatsValue("inventory", dataManager.getAllInventoryItems().size());
                 updateStatsValue("reports", 0); // Placeholder
-                updateStatsValue("visits", 0); // Placeholder
             }
 
             Log.d(TAG, "Dashboard data loaded successfully");
