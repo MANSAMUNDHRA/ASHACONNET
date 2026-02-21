@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tv_staff_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Staff Name"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/color_text" />
+
+        <TextView
+            android:id="@+id/tv_staff_role"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Role"
+            android:textSize="14sp"
+            android:textColor="@color/color_healthcare_primary"
+            android:layout_marginTop="2dp" />
+
+        <TextView
+            android:id="@+id/tv_staff_phone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Phone: Not available"
+            android:textSize="12sp"
+            android:textColor="@color/color_text_secondary"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/tv_staff_location"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Location: Not assigned"
+            android:textSize="12sp"
+            android:textColor="@color/color_text_secondary" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

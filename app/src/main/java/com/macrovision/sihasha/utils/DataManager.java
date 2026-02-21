@@ -22,12 +22,21 @@ public class DataManager {
     private static final String TAG = "DataManager";
     private static final String PREFS_NAME = "sihasha_app_prefs";
     private static final String PATIENTS_KEY = "patients_data";
-    private FinancialData financialData;
+    private static final String USERS_KEY = "users_data";
     private static final String FINANCIAL_KEY = "financial_data";
+    private static final String INVENTORY_KEY = "inventory_data";
+    private static final String STAFF_KEY = "staff_data";
+    // Bump this number any time you want to wipe stale SharedPreferences data
+    private static final int DATA_VERSION = 2;
+    private static final String DATA_VERSION_KEY = "data_version";
 
     private Context context;
     private List<User> users;
     private List<Patient> patients;
+    private List<InventoryItem> inventoryItems;
+    private List<Staff> staffList;
+    private FinancialData financialData;
+    
     private static DataManager instance;
     private Gson gson;
     private SharedPreferences prefs;
@@ -37,13 +46,24 @@ public class DataManager {
         this.gson = new Gson();
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-        // Initialize users (these don't change much, so keep hardcoded)
-        initializeUsers();
+        // Wipe only stale non-user data when DATA_VERSION bumps.
+        // NEVER clear users_data — that would delete all registered accounts.
+        int savedVersion = prefs.getInt(DATA_VERSION_KEY, 0);
+        if (savedVersion < DATA_VERSION) {
+            android.util.Log.w(TAG, "Data version mismatch — clearing stale data (preserving users)");
+            String usersJson = prefs.getString(USERS_KEY, null); // save users first
+            prefs.edit().clear().apply();                         // wipe everything
+            if (usersJson != null) {
+                prefs.edit().putString(USERS_KEY, usersJson).apply(); // restore users
+            }
+            prefs.edit().putInt(DATA_VERSION_KEY, DATA_VERSION).apply();
+        }
 
-        // Load patients from persistent storage or initialize with demo data
+        // Load all data from storage (NO DEMO DATA)
+        loadOrInitializeUsers();
         loadOrInitializePatients();
-
         loadOrInitializeInventory();
+        loadOrInitializeStaff();
         loadOrInitializeFinancial();
     }
 
@@ -54,267 +74,536 @@ public class DataManager {
         return instance;
     }
 
-    private void initializeUsers() {
-        users = new ArrayList<>();
+    // ===== USER STORAGE METHODS =====
 
-        // ASHA Worker
-        User asha = new User("ASHA001", "Priya Devi", "asha", "9876543210",
-                "Rampur", "Baruipur", "South 24 Parganas", "West Bengal",
-                "PHC001", "password123");
-        asha.setPerformance(new User.Performance(25, 23, 92));
-        users.add(asha);
-
-        // PHC Doctor
-        User doctor = new User("PHC001", "Dr. Rajesh Kumar", "phcdoctor", "9876543200",
-                "", "Baruipur", "South 24 Parganas", "West Bengal",
-                "PHC001", "password123");
-        users.add(doctor);
-
-        // PHC Nurse
-        User nurse = new User("PHC002", "Sister Meena Roy", "phcnurse", "9876543201",
-                "", "Baruipur", "South 24 Parganas", "West Bengal",
-                "PHC001", "password123");
-        users.add(nurse);
-
-        // PHC Admin
-        User admin = new User("ADMIN001", "Dr. Amit Sharma", "phcadmin", "9876543100",
-                "", "", "South 24 Parganas", "West Bengal",
-                "", "admin123");
-        users.add(admin);
+    private void loadOrInitializeUsers() {
+        try {
+            String json = prefs.getString(USERS_KEY, null);
+            if (json != null && !json.isEmpty()) {
+                Type listType = new TypeToken<List<User>>() {}.getType();
+                users = gson.fromJson(json, listType);
+                Log.d(TAG, "Loaded " + users.size() + " users from storage");
+            } else {
+                users = new ArrayList<>();
+                Log.d(TAG, "No users found, initialized empty list");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading users", e);
+            users = new ArrayList<>();
+        }
     }
+
+    private void saveUsersToStorage() {
+        try {
+            String json = gson.toJson(users);
+            prefs.edit().putString(USERS_KEY, json).apply();
+            Log.d(TAG, "Saved " + users.size() + " users to storage");
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving users", e);
+        }
+    }
+
+    public boolean registerUser(User user) {
+    if (users == null) users = new ArrayList<>();
+
+    // prevent duplicate ID
+    for (User u : users) {
+        if (u.getId().equals(user.getId())) {
+            Log.w(TAG, "User already exists with ID: " + user.getId());
+            return false;
+        }
+    }
+
+    users.add(user);
+    saveUsersToStorage();
+    
+    // ✅ ALSO ADD TO STAFF LIST
+    addUserToStaff(user);
+    
+    Log.d(TAG, "User registered successfully: " + user.getName());
+    return true;
+}
+
+// ✅ NEW METHOD: Add user to staff list
+private void addUserToStaff(User user) {
+    Staff staff = new Staff(
+        user.getId(),
+        user.getName(),
+        user.getRole(),
+        user.getPhone() != null ? user.getPhone() : "",
+        user.getVillage() != null ? user.getVillage() : "",
+        user.getDistrict() != null ? user.getDistrict() : ""
+    );
+    
+    staff.setBlock(user.getBlock());
+    staff.setState(user.getState());
+    staff.setPhcId(user.getPhcId());
+    staff.setJoiningDate(new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
+    staff.setStatus("active");
+    
+    // Add role-specific fields
+    if ("phcdoctor".equals(user.getRole())) {
+        staff.setQualification("MBBS"); // Default, can be edited later
+        staff.setSpecialization("General Medicine");
+    } else if ("phcnurse".equals(user.getRole())) {
+        staff.setQualification("GNM");
+    } else if ("asha".equals(user.getRole())) {
+        staff.setAssignedPopulation("0");
+        staff.setAssignedFamilies("0");
+    } else if ("phcadmin".equals(user.getRole())) {
+        staff.setDesignation("Administrator");
+    }
+    
+    // Add to staff list
+    if (staffList == null) {
+        staffList = new ArrayList<>();
+    }
+    staffList.add(staff);
+    saveStaffToStorage();
+}
+
+    // ===== AUTHENTICATION METHOD =====
+
+    public User authenticateUser(String userId, String role, String password) {
+        if (users == null || users.isEmpty()) {
+            Log.d(TAG, "No users in system");
+            return null;
+        }
+
+        for (User user : users) {
+            if (user.getId().equals(userId)
+                    && user.getRole().equals(role)
+                    && user.getPassword().equals(password)) {
+                Log.d(TAG, "User authenticated: " + user.getName());
+                return user;
+            }
+        }
+
+        Log.d(TAG, "Authentication failed for user: " + userId);
+        return null;
+    }
+
+    // ===== PATIENT METHODS =====
 
     private void loadOrInitializePatients() {
-        Log.d(TAG, "Loading patients from persistent storage...");
-
         try {
-            // Try to load patients from SharedPreferences
-            patients = loadPatientsFromStorage();
-
-            if (patients == null || patients.isEmpty()) {
-                Log.d(TAG, "No saved patients found, initializing with demo data");
-                initializeDemoPatients();
-                savePatientsToStorage(); // Save demo patients as initial data
-            } else {
+            String json = prefs.getString(PATIENTS_KEY, null);
+            if (json != null && !json.isEmpty()) {
+                Type listType = new TypeToken<List<Patient>>() {}.getType();
+                patients = gson.fromJson(json, listType);
                 Log.d(TAG, "Loaded " + patients.size() + " patients from storage");
+            } else {
+                patients = new ArrayList<>();
+                Log.d(TAG, "No patients found, initialized empty list");
             }
-
         } catch (Exception e) {
-            Log.e(TAG, "Error loading patients, falling back to demo data", e);
-            initializeDemoPatients();
+            Log.e(TAG, "Error loading patients", e);
+            patients = new ArrayList<>();
+        }
+    }
+
+    private void savePatientsToStorage() {
+        try {
+            String json = gson.toJson(patients);
+            prefs.edit().putString(PATIENTS_KEY, json).apply();
+            Log.d(TAG, "Saved " + patients.size() + " patients to storage");
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving patients", e);
+        }
+    }
+
+    // Patient CRUD Operations
+    public boolean addPatient(Patient patient) {
+        try {
+            if (patients == null) patients = new ArrayList<>();
+            patients.add(patient);
             savePatientsToStorage();
-        }
-    }
-
-    private void loadOrInitializeFinancial() {
-        Log.d(TAG, "Loading financial data from persistent storage...");
-
-        try {
-            financialData = loadFinancialFromStorage();
-
-            if (financialData == null) {
-                Log.d(TAG, "No saved financial data found, initializing with demo data");
-                initializeDemoFinancialData();
-                saveFinancialToStorage();
-            } else {
-                Log.d(TAG, "Financial data loaded successfully");
-            }
-
+            Log.d(TAG, "Patient added successfully: " + patient.getName());
+            return true;
         } catch (Exception e) {
-            Log.e(TAG, "Error loading financial data, falling back to demo data", e);
-            initializeDemoFinancialData();
-            saveFinancialToStorage();
+            Log.e(TAG, "Error adding patient", e);
+            return false;
         }
     }
 
-    // Initialize demo financial data
-    private void initializeDemoFinancialData() {
-        Log.d(TAG, "Initializing demo financial data...");
+    public boolean updatePatient(Patient updatedPatient) {
+        try {
+            if (patients == null) return false;
 
-        financialData = new FinancialData();
-
-        // Budget Overview
-        FinancialData.BudgetOverview budgetOverview = new FinancialData.BudgetOverview(
-                15000000, // Annual budget: ₹1.5 Crore
-                8500000,  // Utilized: ₹85 Lakh
-                6500000,  // Remaining: ₹65 Lakh
-                56.7      // Utilization rate: 56.7%
-        );
-        financialData.setBudgetOverview(budgetOverview);
-
-        // Category Budgets
-        Map<String, FinancialData.CategoryBudget> categoryBudgets = new HashMap<>();
-
-        categoryBudgets.put("staff", new FinancialData.CategoryBudget(
-                "Staff Salaries", 8000000, 4800000, 60, "Salaries and wages for all staff members"));
-
-        categoryBudgets.put("medicines", new FinancialData.CategoryBudget(
-                "Medicines & Supplies", 3000000, 1800000, 60, "Medical supplies, drugs, and consumables"));
-
-        categoryBudgets.put("equipment", new FinancialData.CategoryBudget(
-                "Medical Equipment", 2000000, 900000, 45, "Medical devices and equipment maintenance"));
-
-        categoryBudgets.put("infrastructure", new FinancialData.CategoryBudget(
-                "Infrastructure", 1500000, 700000, 47, "Building maintenance and utilities"));
-
-        categoryBudgets.put("training", new FinancialData.CategoryBudget(
-                "Training & Development", 500000, 300000, 60, "Staff training and capacity building"));
-
-        financialData.setCategoryBudgets(categoryBudgets);
-        financialData.setFinancialYear("2025-26");
-
-        Log.d(TAG, "Created " + categoryBudgets.size() + " budget categories:");
-        for (Map.Entry<String, FinancialData.CategoryBudget> entry : categoryBudgets.entrySet()) {
-            FinancialData.CategoryBudget cat = entry.getValue();
-            Log.d(TAG, "  - " + entry.getKey() + ": " + cat.getCategoryName() +
-                    " (₹" + (cat.getAllocated()/100000) + "L allocated)");
+            for (int i = 0; i < patients.size(); i++) {
+                if (patients.get(i).getId().equals(updatedPatient.getId())) {
+                    patients.set(i, updatedPatient);
+                    savePatientsToStorage();
+                    Log.d(TAG, "Patient updated successfully: " + updatedPatient.getName());
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating patient", e);
+            return false;
         }
     }
 
-    // Staff Management Methods
+    public boolean deletePatient(String patientId) {
+        try {
+            if (patients == null) return false;
+
+            for (int i = 0; i < patients.size(); i++) {
+                if (patients.get(i).getId().equals(patientId)) {
+                    patients.remove(i);
+                    savePatientsToStorage();
+                    Log.d(TAG, "Patient deleted successfully: " + patientId);
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            Log.e(TAG, "Error deleting patient", e);
+            return false;
+        }
+    }
+
+    public Patient getPatientById(String patientId) {
+        if (patients == null) return null;
+
+        for (Patient patient : patients) {
+            if (patient.getId().equals(patientId)) {
+                return patient;
+            }
+        }
+        return null;
+    }
+
+    public List<Patient> getAllPatients() {
+        if (patients == null) return new ArrayList<>();
+        return new ArrayList<>(patients);
+    }
+
+    // Role-based patient queries
+    public List<Patient> getPatientsForASHA(String ashaId) {
+        List<Patient> result = new ArrayList<>();
+        if (patients == null || ashaId == null) return result;
+
+        for (Patient patient : patients) {
+            if (ashaId.equals(patient.getAshaId())) {
+                result.add(patient);
+            }
+        }
+        return result;
+    }
+
+    public List<Patient> getPatientsForDoctor(String doctorId) {
+        List<Patient> result = new ArrayList<>();
+        if (patients == null || doctorId == null) return result;
+
+        for (Patient patient : patients) {
+            if (doctorId.equals(patient.getAssignedDoctor())) {
+                result.add(patient);
+            }
+        }
+        return result;
+    }
+
+    public List<Patient> getPatientsForPHC(String phcId) {
+        List<Patient> result = new ArrayList<>();
+        if (patients == null || phcId == null) return result;
+
+        for (Patient patient : patients) {
+            if (phcId.equals(patient.getPhcId())) {
+                result.add(patient);
+            }
+        }
+        return result;
+    }
+
+    // Clinical queries for doctors
+    public List<Patient> getHighRiskPatients() {
+        List<Patient> result = new ArrayList<>();
+        if (patients == null) return result;
+
+        for (Patient patient : patients) {
+            if (patient.isHighRisk()) {
+                result.add(patient);
+            }
+        }
+        return result;
+    }
+
+    public List<Patient> getHighRiskPatientsForDoctor(String doctorId) {
+        List<Patient> result = new ArrayList<>();
+        if (patients == null || doctorId == null) return result;
+
+        for (Patient patient : patients) {
+            if (patient.isHighRisk() && doctorId.equals(patient.getAssignedDoctor())) {
+                result.add(patient);
+            }
+        }
+        return result;
+    }
+
+    public List<Patient> getPregnantPatients() {
+        List<Patient> result = new ArrayList<>();
+        if (patients == null) return result;
+
+        for (Patient patient : patients) {
+            if ("pregnant".equals(patient.getPregnancyStatus())) {
+                result.add(patient);
+            }
+        }
+        return result;
+    }
+
+    public List<Patient> getPatientsByStatus(String status) {
+        List<Patient> result = new ArrayList<>();
+        if (patients == null) return result;
+
+        for (Patient patient : patients) {
+            if (status.equals(patient.getPregnancyStatus())) {
+                result.add(patient);
+            }
+        }
+        return result;
+    }
+
+    // ===== STAFF METHODS =====
+
+    private void loadOrInitializeStaff() {
+        try {
+            String json = prefs.getString(STAFF_KEY, null);
+            if (json != null && !json.isEmpty()) {
+                Type listType = new TypeToken<List<Staff>>() {}.getType();
+                staffList = gson.fromJson(json, listType);
+                Log.d(TAG, "Loaded " + staffList.size() + " staff from storage");
+            } else {
+                staffList = new ArrayList<>();
+                Log.d(TAG, "No staff found, initialized empty list");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading staff", e);
+            staffList = new ArrayList<>();
+        }
+    }
+
+    private void saveStaffToStorage() {
+        try {
+            String json = gson.toJson(staffList);
+            prefs.edit().putString(STAFF_KEY, json).apply();
+            Log.d(TAG, "Saved " + staffList.size() + " staff to storage");
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving staff", e);
+        }
+    }
+
+    public List<User> getAllUsers() {
+        if (users == null) return new ArrayList<>();
+        return new ArrayList<>(users);
+    }
+
     public List<Staff> getStaffList() {
-        try {
-            String staffJson = prefs.getString("staff_data", null);
-            if (staffJson != null) {
-                Type listType = new TypeToken<List<Staff>>(){}.getType();
-                return gson.fromJson(staffJson, listType);
-            } else {
-                return initializeDemoStaffData();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error loading staff data", e);
-            return new ArrayList<>();
-        }
+        if (staffList == null) return new ArrayList<>();
+        return new ArrayList<>(staffList);
     }
 
     public void addStaffMember(Staff staff) {
-        try {
-            List<Staff> staffList = getStaffList();
-            staffList.add(staff);
-            saveStaffToStorage(staffList);
-            Log.d(TAG, "Staff member added: " + staff.getName());
-        } catch (Exception e) {
-            Log.e(TAG, "Error adding staff member", e);
-        }
+        if (staffList == null) staffList = new ArrayList<>();
+        staffList.add(staff);
+        saveStaffToStorage();
     }
 
     public void updateStaffMember(Staff staff) {
+        if (staffList == null) return;
+        for (int i = 0; i < staffList.size(); i++) {
+            if (staffList.get(i).getId().equals(staff.getId())) {
+                staffList.set(i, staff);
+                saveStaffToStorage();
+                break;
+            }
+        }
+    }
+
+    public List<User> getASHAWorkers() {
+        List<User> ashaWorkers = new ArrayList<>();
+        if (users == null) return ashaWorkers;
+
+        for (User user : users) {
+            if ("asha".equals(user.getRole())) {
+                ashaWorkers.add(user);
+            }
+        }
+        return ashaWorkers;
+    }
+
+    public List<User> getDoctors() {
+        List<User> doctors = new ArrayList<>();
+        if (users == null) return doctors;
+
+        for (User user : users) {
+            if ("phcdoctor".equals(user.getRole())) {
+                doctors.add(user);
+            }
+        }
+        return doctors;
+    }
+
+    public User getUserById(String userId) {
+        if (users == null) return null;
+        for (User user : users) {
+            if (user.getId().equals(userId)) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    // ===== INVENTORY METHODS =====
+
+    private void loadOrInitializeInventory() {
         try {
-            List<Staff> staffList = getStaffList();
-            for (int i = 0; i < staffList.size(); i++) {
-                if (staffList.get(i).getId().equals(staff.getId())) {
-                    staffList.set(i, staff);
-                    break;
+            String json = prefs.getString(INVENTORY_KEY, null);
+            if (json != null && !json.isEmpty()) {
+                Type listType = new TypeToken<List<InventoryItem>>() {}.getType();
+                inventoryItems = gson.fromJson(json, listType);
+                Log.d(TAG, "Loaded " + inventoryItems.size() + " inventory items from storage");
+            } else {
+                inventoryItems = new ArrayList<>();
+                Log.d(TAG, "No inventory found, initialized empty list");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading inventory", e);
+            inventoryItems = new ArrayList<>();
+        }
+    }
+
+    private void saveInventoryToStorage() {
+        try {
+            String json = gson.toJson(inventoryItems);
+            prefs.edit().putString(INVENTORY_KEY, json).apply();
+            Log.d(TAG, "Saved " + inventoryItems.size() + " inventory items to storage");
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving inventory", e);
+        }
+    }
+
+    public List<InventoryItem> getAllInventoryItems() {
+        if (inventoryItems == null) return new ArrayList<>();
+        return new ArrayList<>(inventoryItems);
+    }
+
+    public List<InventoryItem> getLowStockItems() {
+        List<InventoryItem> lowStock = new ArrayList<>();
+        if (inventoryItems == null) return lowStock;
+
+        for (InventoryItem item : inventoryItems) {
+            if (item.isLowStock()) {
+                lowStock.add(item);
+            }
+        }
+        return lowStock;
+    }
+
+    public boolean addInventoryItem(InventoryItem item) {
+        try {
+            if (inventoryItems == null) inventoryItems = new ArrayList<>();
+            inventoryItems.add(item);
+            saveInventoryToStorage();
+            Log.d(TAG, "Inventory item added: " + item.getName());
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding inventory item", e);
+            return false;
+        }
+    }
+
+    public boolean updateInventoryItem(InventoryItem updatedItem) {
+        try {
+            if (inventoryItems == null) return false;
+            for (int i = 0; i < inventoryItems.size(); i++) {
+                if (inventoryItems.get(i).getId().equals(updatedItem.getId())) {
+                    inventoryItems.set(i, updatedItem);
+                    saveInventoryToStorage();
+                    Log.d(TAG, "Inventory item updated: " + updatedItem.getName());
+                    return true;
                 }
             }
-            saveStaffToStorage(staffList);
-            Log.d(TAG, "Staff member updated: " + staff.getName());
+            return false;
         } catch (Exception e) {
-            Log.e(TAG, "Error updating staff member", e);
+            Log.e(TAG, "Error updating inventory item", e);
+            return false;
         }
     }
 
-    private void saveStaffToStorage(List<Staff> staffList) {
+    public boolean deleteInventoryItem(String itemId) {
         try {
-            String staffJson = gson.toJson(staffList);
-            prefs.edit().putString("staff_data", staffJson).apply();
-            Log.d(TAG, "Staff data saved to storage");
+            if (inventoryItems == null) return false;
+            
+            for (int i = 0; i < inventoryItems.size(); i++) {
+                if (inventoryItems.get(i).getId().equals(itemId)) {
+                    inventoryItems.remove(i);
+                    saveInventoryToStorage();
+                    Log.d(TAG, "Inventory item deleted: " + itemId);
+                    return true;
+                }
+            }
+            return false;
         } catch (Exception e) {
-            Log.e(TAG, "Error saving staff data", e);
+            Log.e(TAG, "Error deleting inventory item", e);
+            return false;
         }
     }
 
-    private List<Staff> initializeDemoStaffData() {
-        Log.d(TAG, "Initializing demo staff data...");
-
-        List<Staff> demoStaff = new ArrayList<>();
-
-        // ASHA Workers
-        Staff asha1 = new Staff("ASHA001", "Priya Devi", "asha", "9876543210", "Rampur", "South 24 Parganas");
-        asha1.setBlock("Baruipur");
-        asha1.setState("West Bengal");
-        asha1.setPhcId("PHC001");
-        asha1.setPhcName("Baruipur PHC");
-        asha1.setAssignedPopulation("1200");
-        asha1.setAssignedFamilies("240");
-        asha1.setJoiningDate("2020-01-15");
-        asha1.setLastTraining("2024-08-15");
-        asha1.setPerformance(new Staff.Performance(25, 23, 92.0, 45, 3));
-        demoStaff.add(asha1);
-
-        // PHC Doctor
-        Staff doctor1 = new Staff("PHC001", "Dr. Rajesh Kumar", "phcdoctor", "9876543200", "", "South 24 Parganas");
-        doctor1.setPhcName("Baruipur PHC");
-        doctor1.setQualification("MBBS");
-        doctor1.setExperience("8 years");
-        doctor1.setSpecialization("General Medicine");
-        doctor1.setPerformance(new Staff.Performance(150, 145, 96.7, 180, 2));
-        demoStaff.add(doctor1);
-
-        // PHC Nurse
-        Staff nurse1 = new Staff("PHC002", "Sister Meena Roy", "phcnurse", "9876543201", "", "South 24 Parganas");
-        nurse1.setPhcName("Baruipur PHC");
-        nurse1.setQualification("GNM");
-        nurse1.setExperience("12 years");
-        nurse1.setResponsibilities("Immunization, ANC, PNC, Training");
-        nurse1.setPerformance(new Staff.Performance(100, 98, 98.0, 120, 4));
-        demoStaff.add(nurse1);
-
-        // PHC Admin
-        Staff admin1 = new Staff("ADMIN001", "Dr. Amit Sharma", "phcadmin", "9876543100", "", "South 24 Parganas");
-        admin1.setEmail("amit.sharma@health.wb.gov.in");
-        admin1.setDesignation("Chief Medical Officer");
-        admin1.setQualification("MBBS, MPH");
-        admin1.setExperience("15 years");
-        admin1.setManagedPHCs("PHC001, PHC002, PHC003");
-        demoStaff.add(admin1);
-
-        saveStaffToStorage(demoStaff);
-        return demoStaff;
+    public InventoryItem getInventoryItemById(String itemId) {
+        if (inventoryItems == null || itemId == null) {
+            Log.w(TAG, "Inventory items list is null or itemId is null");
+            return null;
+        }
+        
+        for (InventoryItem item : inventoryItems) {
+            if (item.getId() != null && item.getId().equals(itemId)) {
+                Log.d(TAG, "Found inventory item: " + item.getName() + " with ID: " + itemId);
+                return item;
+            }
+        }
+        
+        Log.w(TAG, "Inventory item not found with ID: " + itemId);
+        return null;
     }
 
-    // Storage methods
-    private FinancialData loadFinancialFromStorage() {
+    // ===== FINANCIAL METHODS =====
+
+    private void loadOrInitializeFinancial() {
         try {
             String json = prefs.getString(FINANCIAL_KEY, null);
-
             if (json != null && !json.isEmpty()) {
-                Log.d(TAG, "Found saved financial data, deserializing...");
-                FinancialData loadedData = gson.fromJson(json, FinancialData.class);
-
-                if (loadedData != null) {
-                    Log.d(TAG, "Successfully loaded financial data");
-                    return loadedData;
-                }
+                financialData = gson.fromJson(json, FinancialData.class);
+                Log.d(TAG, "Financial data loaded from storage");
+            } else {
+                financialData = new FinancialData();
+                Log.d(TAG, "No financial data found, initialized empty");
             }
-
-            Log.d(TAG, "No valid financial data found in storage");
-            return null;
-
         } catch (Exception e) {
-            Log.e(TAG, "Error loading financial data from storage", e);
-            return null;
+            Log.e(TAG, "Error loading financial data", e);
+            financialData = new FinancialData();
         }
     }
 
     private void saveFinancialToStorage() {
         try {
-            Log.d(TAG, "Saving financial data to storage...");
-
-            if (financialData != null) {
-                String json = gson.toJson(financialData);
-                prefs.edit().putString(FINANCIAL_KEY, json).apply();
-                Log.d(TAG, "Financial data saved successfully");
-            }
-
+            String json = gson.toJson(financialData);
+            prefs.edit().putString(FINANCIAL_KEY, json).apply();
         } catch (Exception e) {
-            Log.e(TAG, "Error saving financial data to storage", e);
+            Log.e(TAG, "Error saving financial data", e);
         }
     }
 
-    // Public methods for accessing financial data
+    public void saveFinancialData(FinancialData data) {
+        this.financialData = data;
+        saveFinancialToStorage();
+    }
+
     public FinancialData getFinancialData() {
         if (financialData == null) {
-            initializeDemoFinancialData();
+            financialData = new FinancialData();
         }
         return financialData;
     }
@@ -326,12 +615,8 @@ public class DataManager {
                 if (category != null) {
                     category.setSpent(spent);
                     category.setPercentage((spent / category.getAllocated()) * 100);
-
-                    // Update overall budget
                     updateOverallBudgetUtilization();
                     saveFinancialToStorage();
-
-                    Log.d(TAG, "Budget category updated: " + categoryKey);
                     return true;
                 }
             }
@@ -353,247 +638,20 @@ public class DataManager {
             }
 
             FinancialData.BudgetOverview budget = financialData.getBudgetOverview();
-            budget.setUtilized(totalSpent);
-            budget.setRemaining(budget.getAnnualBudget() - totalSpent);
-            budget.setUtilizationRate((totalSpent / budget.getAnnualBudget()) * 100);
+            if (budget != null) {
+                budget.setUtilized(totalSpent);
+                budget.setRemaining(budget.getAnnualBudget() - totalSpent);
+                budget.setUtilizationRate((totalSpent / budget.getAnnualBudget()) * 100);
+            }
         }
     }
 
-
-    private void initializeDemoPatients() {
-        Log.d(TAG, "Initializing demo patients...");
-        patients = new ArrayList<>();
-
-        Patient patient1 = new Patient("PAT001", "Meera Devi", 25, "9876543210",
-                "Rampur", "pregnant", "ASHA001", "PHC001", false);
-        patient1.setHusbandName("Rajesh Kumar");
-        patient1.setEddDate("2025-01-06");
-        patient1.setBloodGroup("O+");
-        patient1.setRegistrationDate("2024-10-01");
-        patients.add(patient1);
-
-        Patient patient2 = new Patient("PAT002", "Kavita Singh", 28, "9876543212",
-                "Shyampur", "delivered", "ASHA001", "PHC001", false);
-        patient2.setHusbandName("Amit Singh");
-        patient2.setBloodGroup("A+");
-        patient2.setRegistrationDate("2024-09-15");
-        patients.add(patient2);
-
-        Patient patient3 = new Patient("PAT003", "Sunita Kumari", 22, "9876543213",
-                "Rampur", "pregnant", "ASHA001", "PHC001", true);
-        patient3.setHusbandName("Ravi Kumar");
-        patient3.setEddDate("2025-02-15");
-        patient3.setBloodGroup("B+");
-        patient3.setRegistrationDate("2024-10-05");
-        patients.add(patient3);
-
-        Log.d(TAG, "Demo patients initialized: " + patients.size());
-    }
-
-    // ===== PERSISTENCE METHODS =====
-
-    private List<Patient> loadPatientsFromStorage() {
-        try {
-            String json = prefs.getString(PATIENTS_KEY, null);
-
-            if (json != null && !json.isEmpty()) {
-                Log.d(TAG, "Found saved patient data, deserializing...");
-                Type listType = new TypeToken<List<Patient>>(){}.getType();
-                List<Patient> loadedPatients = gson.fromJson(json, listType);
-
-                if (loadedPatients != null) {
-                    Log.d(TAG, "Successfully loaded " + loadedPatients.size() + " patients");
-                    return loadedPatients;
-                }
-            }
-
-            Log.d(TAG, "No valid patient data found in storage");
-            return null;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error loading patients from storage", e);
-            return null;
-        }
-    }
-
-    private void savePatientsToStorage() {
-        try {
-            Log.d(TAG, "Saving " + (patients != null ? patients.size() : 0) + " patients to storage...");
-
-            if (patients != null) {
-                String json = gson.toJson(patients);
-                prefs.edit().putString(PATIENTS_KEY, json).apply();
-                Log.d(TAG, "Patients saved successfully");
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error saving patients to storage", e);
-        }
-    }
-
-    // ===== PATIENT CRUD METHODS =====
-
-    public boolean addPatient(Patient patient) {
-        try {
-            Log.d(TAG, "Adding patient: " + patient.getName());
-
-            if (patients == null) {
-                patients = new ArrayList<>();
-            }
-
-            patients.add(patient);
-            savePatientsToStorage(); // ✅ SAVE AFTER ADDING
-
-            Log.d(TAG, "Patient added successfully. Total patients: " + patients.size());
-            return true;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error adding patient", e);
-            return false;
-        }
-    }
-
-    public boolean updatePatient(Patient updatedPatient) {
-        try {
-            Log.d(TAG, "Updating patient: " + updatedPatient.getName());
-
-            if (patients == null) {
-                Log.w(TAG, "Patients list is null");
-                return false;
-            }
-
-            // Find and replace the patient
-            for (int i = 0; i < patients.size(); i++) {
-                if (patients.get(i).getId().equals(updatedPatient.getId())) {
-                    patients.set(i, updatedPatient);
-                    savePatientsToStorage(); // ✅ SAVE AFTER UPDATING
-
-                    Log.d(TAG, "Patient updated successfully: " + updatedPatient.getName());
-                    return true;
-                }
-            }
-
-            Log.w(TAG, "Patient not found for update: " + updatedPatient.getId());
-            return false;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating patient", e);
-            return false;
-        }
-    }
-
-    public boolean deletePatient(String patientId) {
-        try {
-            Log.d(TAG, "Deleting patient by ID: " + patientId);
-
-            if (patients == null) {
-                Log.w(TAG, "Patients list is null");
-                return false;
-            }
-
-            for (int i = 0; i < patients.size(); i++) {
-                if (patients.get(i).getId().equals(patientId)) {
-                    Patient deletedPatient = patients.remove(i);
-                    savePatientsToStorage(); // ✅ SAVE AFTER DELETING
-
-                    Log.d(TAG, "Patient deleted successfully: " + deletedPatient.getName());
-                    return true;
-                }
-            }
-
-            Log.w(TAG, "Patient not found for deletion: " + patientId);
-            return false;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error deleting patient", e);
-            return false;
-        }
-    }
-
-    public Patient getPatientById(String patientId) {
-        try {
-            Log.d(TAG, "Getting patient by ID: " + patientId);
-
-            if (patients == null) {
-                Log.w(TAG, "Patients list is null");
-                return null;
-            }
-
-            for (Patient patient : patients) {
-                if (patient.getId().equals(patientId)) {
-                    Log.d(TAG, "Patient found: " + patient.getName());
-                    return patient;
-                }
-            }
-
-            Log.w(TAG, "Patient not found with ID: " + patientId);
-            return null;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error getting patient by ID", e);
-            return null;
-        }
-    }
-
-    // ===== EXISTING METHODS (Updated to handle null checks) =====
-
-    public User authenticateUser(String userId, String role, String password) {
-        if (users == null) return null;
-
-        for (User user : users) {
-            if (user.getId().equals(userId) && user.getRole().equals(role) && user.getPassword().equals(password)) {
-                return user;
-            }
-        }
-        return null;
-    }
-
-    public int getPatientCountForUser(User user) {
-        if (user == null || patients == null) return 0;
-
-        if (user.getRole().equals("asha")) {
-            return getPatientsForASHA(user.getId()).size();
-        }
-        return patients.size();
-    }
-
-    public List<Patient> getPatientsForASHA(String ashaId) {
-        List<Patient> ashaPatients = new ArrayList<>();
-
-        if (patients == null || ashaId == null) {
-            return ashaPatients;
-        }
-
-        for (Patient patient : patients) {
-            if (ashaId.equals(patient.getAshaId())) {
-                ashaPatients.add(patient);
-            }
-        }
-        return ashaPatients;
-    }
-
-    public List<Patient> getPregnantPatientsForASHA(String ashaId) {
-        List<Patient> pregnantPatients = new ArrayList<>();
-
-        if (patients == null || ashaId == null) {
-            return pregnantPatients;
-        }
-
-        for (Patient patient : patients) {
-            if (ashaId.equals(patient.getAshaId()) && "pregnant".equals(patient.getPregnancyStatus())) {
-                pregnantPatients.add(patient);
-            }
-        }
-        return pregnantPatients;
-    }
+    // ===== ADDITIONAL HELPER METHODS =====
 
     public List<Patient> getHighRiskPatientsForASHA(String ashaId) {
         List<Patient> highRiskPatients = new ArrayList<>();
-
-        if (patients == null || ashaId == null) {
-            return highRiskPatients;
-        }
-
+        if (patients == null || ashaId == null) return highRiskPatients;
+        
         for (Patient patient : patients) {
             if (ashaId.equals(patient.getAshaId()) && patient.isHighRisk()) {
                 highRiskPatients.add(patient);
@@ -602,331 +660,71 @@ public class DataManager {
         return highRiskPatients;
     }
 
-    public List<Patient> getAllPatients() {
-        if (patients == null) {
-            return new ArrayList<>();
-        }
-        return new ArrayList<>(patients);
-    }
-
-    public List<User> getASHAWorkers() {
-        List<User> ashaWorkers = new ArrayList<>();
-
-        if (users == null) {
-            return ashaWorkers;
-        }
-
-        for (User user : users) {
-            if ("asha".equals(user.getRole())) {
-                ashaWorkers.add(user);
-            }
-        }
-        return ashaWorkers;
-    }
-
-    // Placeholder methods for other data operations
-    public List<Object> getChildrenForASHA(String ashaId) {
-        return new ArrayList<>();
-    }
-
-    public List<Object> getScheduledVisitsForUser(String userId) {
-        return new ArrayList<>();
-    }
-
-    public List<Object> getPendingReferrals() {
-        return new ArrayList<>();
-    }
-
-    public List<Object> getScheduledTrainingSessions() {
-        return new ArrayList<>();
-    }
-
-    public List<Object> getHighPriorityReferrals() {
-        return new ArrayList<>();
-    }
-
-    public List<Object> getAllVisits() {
-        return new ArrayList<>();
-    }
-
-    public List<Object> getActiveEmergencyAlerts() {
-        return new ArrayList<>();
-    }
-
     // ===== UTILITY METHODS =====
 
-    /**
-     * Clear all saved patient data (useful for testing or reset functionality)
-     */
+    public int getPatientCountForUser(User user) {
+        if (user == null || patients == null) return 0;
+
+        switch (user.getRole()) {
+            case "asha":
+                return getPatientsForASHA(user.getId()).size();
+            case "phcdoctor":
+                return getPatientsForDoctor(user.getId()).size();
+            default:
+                return patients.size();
+        }
+    }
+
     public void clearAllPatients() {
-        Log.d(TAG, "Clearing all patient data");
         patients = new ArrayList<>();
         savePatientsToStorage();
     }
 
-    /**
-     * Reset to demo data (useful for testing)
-
-
-    public void resetToDemo() {
-        Log.d(TAG, "Resetting to demo data");
-        initializeDemoPatients();
+    public void resetToEmpty() {
+        users = new ArrayList<>();
+        patients = new ArrayList<>();
+        inventoryItems = new ArrayList<>();
+        staffList = new ArrayList<>();
+        financialData = new FinancialData();
+        
+        saveUsersToStorage();
         savePatientsToStorage();
-    }
-
-    /**
-     * Get storage stats for debugging
-     */
-    public void resetFinancialDataDemo() {
-        Log.d(TAG, "Force resetting financial data to demo");
-
-        // Clear any existing data
-        financialData = null;
-        prefs.edit().remove("financial_data").apply();
-
-        // Re-initialize with demo data
-        initializeDemoFinancialData();
+        saveInventoryToStorage();
+        saveStaffToStorage();
         saveFinancialToStorage();
-
-        Log.d(TAG, "Financial data reset complete - " +
-                financialData.getCategoryBudgets().size() + " categories created");
+        
+        Log.d(TAG, "All data reset to empty");
     }
 
     public String getStorageInfo() {
-        String json = prefs.getString(PATIENTS_KEY, "");
-        return "Storage size: " + json.length() + " characters, Patients in memory: " +
-                (patients != null ? patients.size() : 0);
+        return "Users: " + (users != null ? users.size() : 0) +
+               ", Patients: " + (patients != null ? patients.size() : 0) +
+               ", Inventory: " + (inventoryItems != null ? inventoryItems.size() : 0) +
+               ", Staff: " + (staffList != null ? staffList.size() : 0);
     }
 
-    // Add this to your DataManager.java class
-
-    private List<InventoryItem> inventoryItems;
-    private static final String INVENTORY_KEY = "inventory_data";
-
-    // Initialize inventory in the constructor
-    private void loadOrInitializeInventory() {
-        Log.d(TAG, "Loading inventory from persistent storage...");
-
-        try {
-            inventoryItems = loadInventoryFromStorage();
-
-            if (inventoryItems == null || inventoryItems.isEmpty()) {
-                Log.d(TAG, "No saved inventory found, initializing with demo data");
-                initializeDemoInventory();
-                saveInventoryToStorage();
-            } else {
-                Log.d(TAG, "Loaded " + inventoryItems.size() + " inventory items from storage");
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error loading inventory, falling back to demo data", e);
-            initializeDemoInventory();
-            saveInventoryToStorage();
-        }
+    /**
+     * Force reload inventory from SharedPreferences to avoid stale singleton cache.
+     */
+    public void refreshInventoryFromStorage() {
+        loadOrInitializeInventory();
+        Log.d(TAG, "Inventory refreshed from storage: " + (inventoryItems != null ? inventoryItems.size() : 0) + " items");
     }
 
-    private void initializeDemoInventory() {
-        Log.d(TAG, "Initializing demo inventory...");
-        inventoryItems = new ArrayList<>();
-
-        // Medicines
-        InventoryItem ifa = new InventoryItem("MED001", "IFA Tablets", "Medicine",
-                5000, 1000, "2025-12-31", "IFA2024001", "Government Supply", 2.5);
-        inventoryItems.add(ifa);
-
-        InventoryItem calcium = new InventoryItem("MED002", "Calcium Tablets", "Medicine",
-                3000, 500, "2025-10-31", "CAL2024002", "Government Supply", 3.0);
-        inventoryItems.add(calcium);
-
-        InventoryItem paracetamol = new InventoryItem("MED003", "Paracetamol 500mg", "Medicine",
-                2500, 300, "2025-11-30", "PARA2024003", "Government Supply", 1.2);
-        inventoryItems.add(paracetamol);
-
-        // Vaccines
-        InventoryItem bcg = new InventoryItem("VAC001", "BCG Vaccine", "Vaccine",
-                500, 50, "2025-03-31", "BCG2024001", "Serum Institute", 25.0);
-        bcg.setStorageTemp("2-8°C");
-        bcg.setManufacturer("Serum Institute");
-        inventoryItems.add(bcg);
-
-        InventoryItem dpt = new InventoryItem("VAC002", "DPT Vaccine", "Vaccine",
-                300, 40, "2025-04-30", "DPT2024002", "Serum Institute", 35.0);
-        dpt.setStorageTemp("2-8°C");
-        dpt.setManufacturer("Serum Institute");
-        inventoryItems.add(dpt);
-
-        // Supplies
-        InventoryItem syringes = new InventoryItem("SUP001", "Disposable Syringes", "Supply",
-                10000, 2000, "2026-01-31", "SYR2024001", "Medical Supplies Co.", 0.5);
-        inventoryItems.add(syringes);
-
-        InventoryItem gloves = new InventoryItem("SUP002", "Surgical Gloves", "Supply",
-                5000, 1000, "2025-08-31", "GLOVE2024001", "Medical Supplies Co.", 2.0);
-        inventoryItems.add(gloves);
-
-        // Add some low stock items for demonstration
-        InventoryItem lowStock = new InventoryItem("MED004", "Folic Acid", "Medicine",
-                25, 100, "2025-09-30", "FOLIC2024001", "Government Supply", 1.8);
-        inventoryItems.add(lowStock);
-
-        Log.d(TAG, "Demo inventory initialized: " + inventoryItems.size() + " items");
+    /**
+     * Force reload all data from SharedPreferences.
+     */
+    public void refreshAllFromStorage() {
+        loadOrInitializeUsers();
+        loadOrInitializePatients();
+        loadOrInitializeInventory();
+        loadOrInitializeStaff();
+        loadOrInitializeFinancial();
+        Log.d(TAG, "All data refreshed. " + getStorageInfo());
     }
 
-    private List<InventoryItem> loadInventoryFromStorage() {
-        try {
-            String json = prefs.getString(INVENTORY_KEY, null);
-
-            if (json != null && !json.isEmpty()) {
-                Log.d(TAG, "Found saved inventory data, deserializing...");
-                Type listType = new TypeToken<List<InventoryItem>>(){}.getType();
-                List<InventoryItem> loadedItems = gson.fromJson(json, listType);
-
-                if (loadedItems != null) {
-                    Log.d(TAG, "Successfully loaded " + loadedItems.size() + " inventory items");
-                    return loadedItems;
-                }
-            }
-
-            Log.d(TAG, "No valid inventory data found in storage");
-            return null;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error loading inventory from storage", e);
-            return null;
-        }
-    }
-
-    private void saveInventoryToStorage() {
-        try {
-            Log.d(TAG, "Saving " + (inventoryItems != null ? inventoryItems.size() : 0) + " inventory items to storage...");
-
-            if (inventoryItems != null) {
-                String json = gson.toJson(inventoryItems);
-                prefs.edit().putString(INVENTORY_KEY, json).apply();
-                Log.d(TAG, "Inventory saved successfully");
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error saving inventory to storage", e);
-        }
-    }
-
-    // Inventory CRUD methods
-    public List<InventoryItem> getAllInventoryItems() {
-        if (inventoryItems == null) {
-            return new ArrayList<>();
-        }
-        return new ArrayList<>(inventoryItems);
-    }
-
-    public List<InventoryItem> getInventoryByCategory(String category) {
-        List<InventoryItem> filtered = new ArrayList<>();
-        if (inventoryItems != null) {
-            for (InventoryItem item : inventoryItems) {
-                if (category.equals(item.getCategory())) {
-                    filtered.add(item);
-                }
-            }
-        }
-        return filtered;
-    }
-
-    public List<InventoryItem> getLowStockItems() {
-        List<InventoryItem> lowStock = new ArrayList<>();
-        if (inventoryItems != null) {
-            for (InventoryItem item : inventoryItems) {
-                if (item.isLowStock()) {
-                    lowStock.add(item);
-                }
-            }
-        }
-        return lowStock;
-    }
-
-    public boolean addInventoryItem(InventoryItem item) {
-        try {
-            Log.d(TAG, "Adding inventory item: " + item.getName());
-
-            if (inventoryItems == null) {
-                inventoryItems = new ArrayList<>();
-            }
-
-            inventoryItems.add(item);
-            saveInventoryToStorage();
-
-            Log.d(TAG, "Inventory item added successfully. Total items: " + inventoryItems.size());
-            return true;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error adding inventory item", e);
-            return false;
-        }
-    }
-
-    public boolean updateInventoryItem(InventoryItem updatedItem) {
-        try {
-            Log.d(TAG, "Updating inventory item: " + updatedItem.getName());
-
-            if (inventoryItems == null) {
-                Log.w(TAG, "Inventory list is null");
-                return false;
-            }
-
-            for (int i = 0; i < inventoryItems.size(); i++) {
-                if (inventoryItems.get(i).getId().equals(updatedItem.getId())) {
-                    inventoryItems.set(i, updatedItem);
-                    saveInventoryToStorage();
-
-                    Log.d(TAG, "Inventory item updated successfully: " + updatedItem.getName());
-                    return true;
-                }
-            }
-
-            Log.w(TAG, "Inventory item not found for update: " + updatedItem.getId());
-            return false;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating inventory item", e);
-            return false;
-        }
-    }
-
-    public boolean deleteInventoryItem(String itemId) {
-        try {
-            Log.d(TAG, "Deleting inventory item by ID: " + itemId);
-
-            if (inventoryItems == null) {
-                Log.w(TAG, "Inventory list is null");
-                return false;
-            }
-
-            for (int i = 0; i < inventoryItems.size(); i++) {
-                if (inventoryItems.get(i).getId().equals(itemId)) {
-                    InventoryItem deletedItem = inventoryItems.remove(i);
-                    saveInventoryToStorage();
-
-                    Log.d(TAG, "Inventory item deleted successfully: " + deletedItem.getName());
-                    return true;
-                }
-            }
-
-            Log.w(TAG, "Inventory item not found for deletion: " + itemId);
-            return false;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error deleting inventory item", e);
-            return false;
-        }
-    }
-
-    public InventoryItem getInventoryItemById(String itemId) {
-        if (inventoryItems != null) {
-            for (InventoryItem item : inventoryItems) {
-                if (item.getId().equals(itemId)) {
-                    return item;
-                }
-            }
-        }
-        return null;
-    }
+    // Placeholder methods (to be implemented with actual features)
+    public List<Object> getPendingReferrals() { return new ArrayList<>(); }
+    public List<Object> getScheduledVisitsForUser(String userId) { return new ArrayList<>(); }
+    public List<Object> getChildrenForASHA(String ashaId) { return new ArrayList<>(); }
 }

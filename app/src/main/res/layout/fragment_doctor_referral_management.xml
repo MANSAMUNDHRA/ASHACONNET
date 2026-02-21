@@ -12,28 +12,68 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_marginBottom="16dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Staff Management"
+            android:text="Referral Management"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@color/color_text" />
 
         <TextView
-            android:id="@+id/tv_staff_count"
+            android:id="@+id/tv_referral_count"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0 staff"
+            android:text="0"
             android:textSize="14sp"
-            android:textColor="@color/color_healthcare_primary"
+            android:textColor="@color/color_warning"
             android:background="@drawable/count_badge_background"
             android:paddingHorizontal="12dp"
             android:paddingVertical="4dp" />
     </LinearLayout>
+
+    <!-- Status Filter Chips -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:singleSelection="true"
+        app:selectionRequired="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_pending"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pending"
+            android:checked="true"
+            style="@style/Widget.Material3.Chip.Filter" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_accepted"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Accepted"
+            style="@style/Widget.Material3.Chip.Filter" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_rejected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rejected"
+            style="@style/Widget.Material3.Chip.Filter" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_all"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="All"
+            style="@style/Widget.Material3.Chip.Filter" />
+    </com.google.android.material.chip.ChipGroup>
 
     <!-- Action Buttons -->
     <LinearLayout
@@ -43,28 +83,38 @@
         android:layout_marginBottom="16dp">
 
         <Button
-            android:id="@+id/btn_add_staff"
+            android:id="@+id/btn_accept"
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:text="Add Staff"
+            android:text="Accept"
             android:textSize="12sp"
             android:layout_marginEnd="8dp"
             android:backgroundTint="@color/color_success" />
 
         <Button
-            android:id="@+id/btn_refresh"
+            android:id="@+id/btn_reject"
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:text="Refresh"
+            android:text="Reject"
+            android:textSize="12sp"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="@color/color_error" />
+
+        <Button
+            android:id="@+id/btn_add_diagnosis"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="Diagnosis"
             android:textSize="12sp"
             android:backgroundTint="@color/color_healthcare_primary" />
     </LinearLayout>
 
     <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_staff"
+        android:id="@+id/recycler_referrals"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -83,23 +133,14 @@
         <ImageView
             android:layout_width="80dp"
             android:layout_height="80dp"
-            android:src="@drawable/ic_no_staff"
+            android:src="@drawable/ic_no_referrals"
             android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="No staff members found"
+            android:text="No referrals found"
             android:textSize="16sp"
             android:textColor="@color/color_text_secondary" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Staff will appear here when users register"
-            android:textSize="12sp"
-            android:textColor="@color/color_text_secondary"
-            android:layout_marginTop="8dp" />
     </LinearLayout>
-
 </LinearLayout>

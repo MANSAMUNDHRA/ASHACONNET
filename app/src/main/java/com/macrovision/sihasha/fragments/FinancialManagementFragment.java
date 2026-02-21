@@ -1,18 +1,17 @@
 package com.macrovision.sihasha.fragments;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,489 +28,352 @@ import com.macrovision.sihasha.models.User;
 import com.macrovision.sihasha.utils.DataManager;
 import com.macrovision.sihasha.utils.SharedPrefsManager;
 
-import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class FinancialManagementFragment extends Fragment implements BudgetCategoryAdapter.OnBudgetCategoryClickListener {
+public class FinancialManagementFragment extends Fragment
+        implements BudgetCategoryAdapter.OnBudgetCategoryClickListener {
 
     private static final String TAG = "FinancialFragment";
 
-    // UI Components
     private TextView tvAnnualBudget, tvUtilizedAmount, tvRemainingAmount, tvUtilizationPercentage;
     private ProgressBar progressBudgetUtilization;
-
     private Button btnGenerateReport, btnManageBudget, btnExpenseTracker, btnBudgetAlerts, btnFinancialAudit;
     private RecyclerView recyclerBudgetCategories;
 
-    // Adapter
     private BudgetCategoryAdapter budgetCategoryAdapter;
-    private List<FinancialData.CategoryBudget> categoryBudgets;
+    private List<FinancialData.CategoryBudget> categoryBudgets = new ArrayList<>();
 
-    // Data Management
     private DataManager dataManager;
     private SharedPrefsManager prefsManager;
     private User currentUser;
     private FinancialData financialData;
-    private NumberFormat currencyFormat;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        Log.d(TAG, "onCreateView called");
-
         View view = inflater.inflate(R.layout.fragment_financial_management, container, false);
-
         try {
             initializeComponents(view);
             setupRecyclerView();
-            setupSpinners();
             setupEventListeners();
-            loadUserData();
+            currentUser = prefsManager.getCurrentUser();
             loadFinancialData();
-
-            Log.d(TAG, "Fragment setup completed successfully");
         } catch (Exception e) {
             Log.e(TAG, "Error in onCreateView", e);
         }
-
         return view;
     }
 
     private void initializeComponents(View view) {
-        Log.d(TAG, "Initializing components...");
-
-        // Budget Overview Components
         tvAnnualBudget = view.findViewById(R.id.tv_annual_budget);
         tvUtilizedAmount = view.findViewById(R.id.tv_utilized_amount);
         tvRemainingAmount = view.findViewById(R.id.tv_remaining_amount);
         tvUtilizationPercentage = view.findViewById(R.id.tv_utilization_percentage);
         progressBudgetUtilization = view.findViewById(R.id.progress_budget_utilization);
-
-        // Controls
-
         btnGenerateReport = view.findViewById(R.id.btn_generate_report);
-
-        // Quick Action Buttons
         btnManageBudget = view.findViewById(R.id.btn_manage_budget);
         btnExpenseTracker = view.findViewById(R.id.btn_expense_tracker);
         btnBudgetAlerts = view.findViewById(R.id.btn_budget_alerts);
         btnFinancialAudit = view.findViewById(R.id.btn_financial_audit);
-
-        // RecyclerView
         recyclerBudgetCategories = view.findViewById(R.id.recycler_budget_categories);
-
-        // Data Management
         dataManager = DataManager.getInstance(requireContext());
         prefsManager = new SharedPrefsManager(requireContext());
-
-        // Initialize lists
-        categoryBudgets = new ArrayList<>();
-
-        // Currency formatter for Indian Rupees
-        currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
-
-        Log.d(TAG, "Components initialized successfully");
     }
 
     private void setupRecyclerView() {
-        Log.d(TAG, "Setting up RecyclerView...");
-
-        if (recyclerBudgetCategories == null) {
-            Log.e(TAG, "RecyclerView is null!");
-            return;
-        }
-
-        try {
-            LinearLayoutManager layoutManager = new LinearLayoutManager(requireContext());
-            recyclerBudgetCategories.setLayoutManager(layoutManager);
-
-            budgetCategoryAdapter = new BudgetCategoryAdapter(categoryBudgets, this);
-            recyclerBudgetCategories.setAdapter(budgetCategoryAdapter);
-
-            Log.d(TAG, "RecyclerView setup completed");
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error setting up RecyclerView", e);
-        }
-    }
-
-    private void setupSpinners() {
-        Log.d(TAG, "Setting up spinners...");
-
-
-
-        try {
-            // Financial Period Spinner
-            List<String> periods = Arrays.asList(
-                    "Current Year (2024-25)", "Previous Year (2023-24)",
-                    "Q1 2024-25", "Q2 2024-25", "Q3 2024-25", "Q4 2024-25"
-            );
-            ArrayAdapter<String> periodAdapter = new ArrayAdapter<>(
-                    requireContext(),
-                    android.R.layout.simple_spinner_item,
-                    periods
-            );
-            periodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-            Log.d(TAG, "Spinners setup completed");
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error setting up spinners", e);
-        }
+        if (recyclerBudgetCategories == null) return;
+        recyclerBudgetCategories.setLayoutManager(new LinearLayoutManager(requireContext()));
+        budgetCategoryAdapter = new BudgetCategoryAdapter(categoryBudgets, this);
+        recyclerBudgetCategories.setAdapter(budgetCategoryAdapter);
     }
 
     private void setupEventListeners() {
-        Log.d(TAG, "Setting up event listeners...");
-
-        try {
-            // Generate Report button
-            if (btnGenerateReport != null) {
-                btnGenerateReport.setOnClickListener(v -> generateFinancialReport());
-            }
-
-            // Quick Action buttons
-            if (btnManageBudget != null) {
-                btnManageBudget.setOnClickListener(v -> showBudgetManagementDialog());
-            }
-
-            if (btnExpenseTracker != null) {
-                btnExpenseTracker.setOnClickListener(v -> showExpenseTrackerDialog());
-            }
-
-            if (btnBudgetAlerts != null) {
-                btnBudgetAlerts.setOnClickListener(v -> showBudgetAlertsDialog());
-            }
-
-            if (btnFinancialAudit != null) {
-                btnFinancialAudit.setOnClickListener(v -> showFinancialAuditDialog());
-            }
-
-            Log.d(TAG, "Event listeners setup completed");
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error setting up event listeners", e);
-        }
-    }
-
-    private void loadUserData() {
-        currentUser = prefsManager.getCurrentUser();
-        if (currentUser != null) {
-            Log.d(TAG, "Current user: " + currentUser.getName() + ", Role: " + currentUser.getRole());
-
-            // Verify user has financial access
-            if (!"phcadmin".equals(currentUser.getRole())) {
-                Log.w(TAG, "User does not have financial access");
-                Toast.makeText(requireContext(), "Access denied - Admin only", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            Log.w(TAG, "Current user is null");
-        }
+        if (btnGenerateReport != null)
+            btnGenerateReport.setOnClickListener(v -> generateAndShareReport());
+        if (btnManageBudget != null)
+            btnManageBudget.setOnClickListener(v -> showSetBudgetDialog());
+        if (btnExpenseTracker != null)
+            btnExpenseTracker.setOnClickListener(v -> showUpdateExpenseDialog());
+        if (btnBudgetAlerts != null)
+            btnBudgetAlerts.setOnClickListener(v -> showBudgetAlertsDialog());
+        if (btnFinancialAudit != null)
+            btnFinancialAudit.setOnClickListener(v -> Toast.makeText(requireContext(),
+                    "Financial audit coming soon", Toast.LENGTH_SHORT).show());
     }
 
     private void loadFinancialData() {
-
-        Log.d(TAG, "Loading financial data...");
-
         try {
             financialData = dataManager.getFinancialData();
 
-            if (financialData != null) {
-                Log.d(TAG, "Financial data loaded successfully");
-                updateBudgetOverview();
-                updateCategoryBudgets();
+            // If no real data entered yet, show zeros — NOT fake numbers
+            if (financialData == null) financialData = new FinancialData();
+
+            if (financialData.getBudgetOverview() == null) {
+                // First time — show all zeros, prompt admin to set budget
+                showZeroState();
             } else {
-                Log.e(TAG, "Financial data is null");
-                Toast.makeText(requireContext(), "Error loading financial data", Toast.LENGTH_SHORT).show();
+                updateBudgetOverview();
             }
 
+            updateCategoryBudgets();
         } catch (Exception e) {
             Log.e(TAG, "Error loading financial data", e);
-            Toast.makeText(requireContext(), "Error loading financial data", Toast.LENGTH_SHORT).show();
+            showZeroState();
         }
+    }
+
+    private void showZeroState() {
+        if (tvAnnualBudget != null) tvAnnualBudget.setText("₹0");
+        if (tvUtilizedAmount != null) tvUtilizedAmount.setText("₹0");
+        if (tvRemainingAmount != null) tvRemainingAmount.setText("₹0");
+        if (tvUtilizationPercentage != null) tvUtilizationPercentage.setText("0% Utilized");
+        if (progressBudgetUtilization != null) progressBudgetUtilization.setProgress(0);
+        Toast.makeText(requireContext(),
+                "No budget set yet. Use 'Manage Budget' to set annual budget.",
+                Toast.LENGTH_LONG).show();
     }
 
     private void updateBudgetOverview() {
         if (financialData == null || financialData.getBudgetOverview() == null) {
-            Log.w(TAG, "Budget overview data is null");
+            showZeroState();
             return;
         }
-
-        try {
-            FinancialData.BudgetOverview budget = financialData.getBudgetOverview();
-
-            // Update budget amounts
-            tvAnnualBudget.setText(formatCurrency(budget.getAnnualBudget()));
-            tvUtilizedAmount.setText(formatCurrency(budget.getUtilized()));
-            tvRemainingAmount.setText(formatCurrency(budget.getRemaining()));
-
-            // Update utilization percentage
-            int utilizationRate = (int) budget.getUtilizationRate();
-            tvUtilizationPercentage.setText(utilizationRate + "% Utilized");
-            progressBudgetUtilization.setProgress(utilizationRate);
-
-            Log.d(TAG, "Budget overview updated - Utilization: " + utilizationRate + "%");
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating budget overview", e);
-        }
+        FinancialData.BudgetOverview budget = financialData.getBudgetOverview();
+        if (tvAnnualBudget != null) tvAnnualBudget.setText(formatCurrency(budget.getAnnualBudget()));
+        if (tvUtilizedAmount != null) tvUtilizedAmount.setText(formatCurrency(budget.getUtilized()));
+        if (tvRemainingAmount != null) tvRemainingAmount.setText(formatCurrency(budget.getRemaining()));
+        int rate = (int) budget.getUtilizationRate();
+        if (tvUtilizationPercentage != null) tvUtilizationPercentage.setText(rate + "% Utilized");
+        if (progressBudgetUtilization != null) progressBudgetUtilization.setProgress(rate);
     }
 
     private void updateCategoryBudgets() {
-        if (financialData == null || financialData.getCategoryBudgets() == null) {
-            Log.w(TAG, "Category budgets data is null");
-            return;
+        categoryBudgets.clear();
+        if (financialData != null && financialData.getCategoryBudgets() != null) {
+            categoryBudgets.addAll(financialData.getCategoryBudgets().values());
         }
-
-        try {
-            categoryBudgets.clear();
-
-            Map<String, FinancialData.CategoryBudget> budgets = financialData.getCategoryBudgets();
-            for (FinancialData.CategoryBudget category : budgets.values()) {
-                categoryBudgets.add(category);
-            }
-
-            if (budgetCategoryAdapter != null) {
-                Log.d(TAG, "Calling adapter.notifyDataSetChanged()");
-                budgetCategoryAdapter.notifyDataSetChanged();
-                Log.d(TAG, "Adapter item count after notify: " + budgetCategoryAdapter.getItemCount());
-            }
-            else {
-                Log.e(TAG, "budgetCategoryAdapter is null!");
-            }
-
-            Log.d(TAG, "=== END CATEGORY BUDGETS UPDATE ===");
-
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating category budgets", e);
-        }
+        if (budgetCategoryAdapter != null) budgetCategoryAdapter.notifyDataSetChanged();
     }
 
     private String formatCurrency(double amount) {
-        // Convert to Lakhs/Crores for better readability
-        if (amount >= 10000000) { // 1 Crore
-            return String.format(Locale.getDefault(), "₹%.2f Cr", amount / 10000000);
-        } else if (amount >= 100000) { // 1 Lakh
-            return String.format(Locale.getDefault(), "₹%.2f L", amount / 100000);
-        } else {
-            return String.format(Locale.getDefault(), "₹%.0f", amount);
-        }
+        if (amount >= 10000000) return String.format(Locale.getDefault(), "₹%.2f Cr", amount / 10000000);
+        else if (amount >= 100000) return String.format(Locale.getDefault(), "₹%.2f L", amount / 100000);
+        else return String.format(Locale.getDefault(), "₹%.0f", amount);
     }
 
-    // Quick Action Methods
-    private void generateFinancialReport() {
-        Log.d(TAG, "Generating financial report...");
+    // ─── SET BUDGET DIALOG ───────────────────────────────────────────────────
+    private void showSetBudgetDialog() {
+        EditText input = new EditText(requireContext());
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setHint("Enter annual budget (₹)");
 
+        LinearLayout container = new LinearLayout(requireContext());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(50, 40, 50, 10);
+        container.addView(input);
 
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Set Annual Budget")
+                .setMessage("Enter the total annual budget for this PHC:")
+                .setView(container)
+                .setPositiveButton("Set Budget", (d, w) -> {
+                    try {
+                        double budget = Double.parseDouble(input.getText().toString().trim());
+                        if (budget <= 0) {
+                            Toast.makeText(requireContext(), "Enter a valid amount", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        setBudget(budget);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(requireContext(), "Enter a valid number", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
 
-        StringBuilder reportContent = new StringBuilder();
-        reportContent.append("FINANCIAL REPORT\n");
+    private void setBudget(double annualBudget) {
+        if (financialData == null) financialData = new FinancialData();
 
+        FinancialData.BudgetOverview overview = new FinancialData.BudgetOverview();
+        overview.setAnnualBudget(annualBudget);
+        overview.setUtilized(0);
+        overview.setRemaining(annualBudget);
+        overview.setUtilizationRate(0);
+        financialData.setBudgetOverview(overview);
+
+        dataManager.saveFinancialData(financialData);
+        updateBudgetOverview();
+        Toast.makeText(requireContext(), "Budget set to " + formatCurrency(annualBudget), Toast.LENGTH_SHORT).show();
+    }
+
+    // ─── UPDATE EXPENSE DIALOG ───────────────────────────────────────────────
+    private void showUpdateExpenseDialog() {
+        if (financialData == null || financialData.getBudgetOverview() == null) {
+            Toast.makeText(requireContext(), "Set annual budget first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] categories = {"Staff Salaries", "Medicines & Supplies", "Medical Equipment",
+                "Infrastructure", "Training & Development", "Other"};
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Record Expense")
+                .setItems(categories, (d, which) -> showExpenseAmountDialog(categories[which]))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showExpenseAmountDialog(String categoryName) {
+        EditText input = new EditText(requireContext());
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setHint("Enter expense amount (₹)");
+
+        LinearLayout container = new LinearLayout(requireContext());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(50, 40, 50, 10);
+        container.addView(input);
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Expense: " + categoryName)
+                .setView(container)
+                .setPositiveButton("Record", (d, w) -> {
+                    try {
+                        double amount = Double.parseDouble(input.getText().toString().trim());
+                        if (amount <= 0) {
+                            Toast.makeText(requireContext(), "Enter a valid amount", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        recordExpense(categoryName, amount);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(requireContext(), "Enter a valid number", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void recordExpense(String categoryName, double amount) {
+        if (financialData == null) return;
+
+        // Update or create category budget
+        java.util.HashMap<String, FinancialData.CategoryBudget> cats = new java.util.HashMap<>();
+        if (financialData.getCategoryBudgets() != null)
+            cats.putAll(financialData.getCategoryBudgets());
+
+        String key = categoryName.toLowerCase().replace(" & ", "_").replace(" ", "_");
+        FinancialData.CategoryBudget cat = cats.getOrDefault(key, new FinancialData.CategoryBudget());
+        cat.setCategoryName(categoryName);
+        cat.setSpent(cat.getSpent() + amount);
+        cats.put(key, cat);
+        financialData.setCategoryBudgets(cats);
+
+        // Update totals
+        FinancialData.BudgetOverview overview = financialData.getBudgetOverview();
+        double newUtilized = overview.getUtilized() + amount;
+        overview.setUtilized(newUtilized);
+        overview.setRemaining(overview.getAnnualBudget() - newUtilized);
+        if (overview.getAnnualBudget() > 0)
+            overview.setUtilizationRate((newUtilized / overview.getAnnualBudget()) * 100);
+
+        dataManager.saveFinancialData(financialData);
+        updateBudgetOverview();
+        updateCategoryBudgets();
+        Toast.makeText(requireContext(), "Expense of " + formatCurrency(amount) + " recorded under " + categoryName,
+                Toast.LENGTH_SHORT).show();
+    }
+
+    // ─── BUDGET ALERTS ───────────────────────────────────────────────────────
+    private void showBudgetAlertsDialog() {
+        StringBuilder alerts = new StringBuilder("BUDGET ALERTS\n\n");
+        boolean hasAlerts = false;
 
         if (financialData != null && financialData.getBudgetOverview() != null) {
-            FinancialData.BudgetOverview budget = financialData.getBudgetOverview();
-            reportContent.append("BUDGET OVERVIEW:\n");
-            reportContent.append("Annual Budget: ").append(formatCurrency(budget.getAnnualBudget())).append("\n");
-            reportContent.append("Utilized: ").append(formatCurrency(budget.getUtilized())).append("\n");
-            reportContent.append("Remaining: ").append(formatCurrency(budget.getRemaining())).append("\n");
-            reportContent.append("Utilization Rate: ").append(String.format("%.1f%%", budget.getUtilizationRate())).append("\n\n");
-
-            reportContent.append("CATEGORY BREAKDOWN:\n");
-            for (FinancialData.CategoryBudget category : categoryBudgets) {
-                reportContent.append("• ").append(category.getCategoryName()).append(":\n");
-                reportContent.append("  Allocated: ").append(formatCurrency(category.getAllocated())).append("\n");
-                reportContent.append("  Spent: ").append(formatCurrency(category.getSpent())).append("\n");
-                reportContent.append("  Remaining: ").append(formatCurrency(category.getRemaining())).append("\n\n");
-            }
+            double rate = financialData.getBudgetOverview().getUtilizationRate();
+            if (rate >= 90) { alerts.append("🚨 CRITICAL: Overall budget is ").append((int)rate).append("% utilized!\n\n"); hasAlerts = true; }
+            else if (rate >= 75) { alerts.append("⚠️ WARNING: Overall budget is ").append((int)rate).append("% utilized.\n\n"); hasAlerts = true; }
         }
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Financial Report ")
-                .setMessage(reportContent.toString())
-                .setPositiveButton("Export PDF", (dialog, which) -> {
-                    Toast.makeText(requireContext(), "PDF export feature coming soon!", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Close", null)
-                .show();
-    }
-
-    private void showBudgetManagementDialog() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Budget Management")
-                .setMessage("Budget management features:\n\n• Reallocate funds between categories\n• Set budget limits\n• Approve budget increases\n• Budget planning for next fiscal year")
-                .setPositiveButton("Manage Budget", (dialog, which) -> {
-                    Toast.makeText(requireContext(), "Budget management coming soon!", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showExpenseTrackerDialog() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Expense Tracker")
-                .setMessage("Track and monitor expenses:\n\n• Daily expense logs\n• Monthly spending patterns\n• Expense approvals\n• Vendor payment tracking")
-                .setPositiveButton("Open Tracker", (dialog, which) -> {
-                    Toast.makeText(requireContext(), "Expense tracker coming soon!", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showBudgetAlertsDialog() {
-        StringBuilder alertsContent = new StringBuilder();
-        alertsContent.append("BUDGET ALERTS:\n\n");
-
-        boolean hasAlerts = false;
-        for (FinancialData.CategoryBudget category : categoryBudgets) {
-            if (category.getPercentage() > 80) {
-                alertsContent.append("⚠️ ").append(category.getCategoryName()).append("\n");
-                alertsContent.append("   ").append(String.format("%.1f%% utilized", category.getPercentage())).append("\n\n");
+        for (FinancialData.CategoryBudget cat : categoryBudgets) {
+            if (cat.getAllocated() > 0 && cat.getPercentage() >= 80) {
+                alerts.append("⚠️ ").append(cat.getCategoryName()).append(": ")
+                        .append(String.format("%.0f%%", cat.getPercentage())).append(" utilized\n");
                 hasAlerts = true;
             }
         }
 
-        if (!hasAlerts) {
-            alertsContent.append("✅ All budgets are within safe limits.\n");
-        }
+        if (!hasAlerts) alerts.append("✅ All budgets are within safe limits.");
 
         new AlertDialog.Builder(requireContext())
                 .setTitle("Budget Alerts")
-                .setMessage(alertsContent.toString())
-                .setPositiveButton("Set Alert Preferences", (dialog, which) -> {
-                    Toast.makeText(requireContext(), "Alert preferences coming soon!", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Close", null)
-                .show();
-    }
-
-    private void showFinancialAuditDialog() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Financial Audit")
-                .setMessage("Financial audit features:\n\n• Schedule internal audits\n• External audit preparation\n• Compliance checks\n• Financial documentation review\n\nLast Audit: March 2024\nNext Scheduled: December 2024")
-                .setPositiveButton("Schedule Audit", (dialog, which) -> {
-                    Toast.makeText(requireContext(), "Audit scheduling coming soon!", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    // BudgetCategoryAdapter.OnBudgetCategoryClickListener implementation
-    @Override
-    public void onBudgetCategoryClick(FinancialData.CategoryBudget category) {
-        Log.d(TAG, "Budget category clicked: " + category.getCategoryName());
-        showCategoryDetailDialog(category);
-    }
-
-    @Override
-    public void onBudgetCategoryLongClick(FinancialData.CategoryBudget category) {
-        Log.d(TAG, "Budget category long clicked: " + category.getCategoryName());
-        showCategoryManagementDialog(category);
-    }
-
-    private void showCategoryDetailDialog(FinancialData.CategoryBudget category) {
-        String details = "Category: " + category.getCategoryName() + "\n\n" +
-                "Allocated Amount: " + formatCurrency(category.getAllocated()) + "\n" +
-                "Amount Spent: " + formatCurrency(category.getSpent()) + "\n" +
-                "Remaining Amount: " + formatCurrency(category.getRemaining()) + "\n" +
-                "Utilization: " + String.format("%.1f%%", category.getPercentage()) + "\n\n" +
-                "Description: " + category.getDescription();
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Budget Category Details")
-                .setMessage(details)
+                .setMessage(alerts.toString())
                 .setPositiveButton("OK", null)
                 .show();
     }
 
-    private void showCategoryManagementDialog(FinancialData.CategoryBudget category) {
-        String[] options = {"Update Spent Amount", "Reallocate Budget", "View Transaction History", "Export Category Report"};
+    // ─── GENERATE & SHARE REPORT ─────────────────────────────────────────────
+    private void generateAndShareReport() {
+        String date = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(new Date());
+        String admin = currentUser != null ? currentUser.getName() : "PHC Admin";
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Manage: " + category.getCategoryName())
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0: // Update Spent Amount
-                            showUpdateSpentDialog(category);
-                            break;
-                        case 1: // Reallocate Budget
-                            Toast.makeText(requireContext(), "Budget reallocation coming soon!", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 2: // View Transaction History
-                            Toast.makeText(requireContext(), "Transaction history coming soon!", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 3: // Export Category Report
-                            Toast.makeText(requireContext(), "Category report export coming soon!", Toast.LENGTH_SHORT).show();
-                            break;
-                    }
-                })
-                .show();
-    }
+        StringBuilder report = new StringBuilder();
+        report.append("========================================\n");
+        report.append("    ASHA CONNECT - FINANCIAL REPORT\n");
+        report.append("========================================\n");
+        report.append("Generated by: ").append(admin).append("\n");
+        report.append("Date: ").append(date).append("\n");
+        report.append("========================================\n\n");
 
-    private void showUpdateSpentDialog(FinancialData.CategoryBudget category) {
-        final EditText input = new EditText(requireContext());
-        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setHint("Enter amount spent");
-        input.setText(String.valueOf((int) category.getSpent()));
+        if (financialData != null && financialData.getBudgetOverview() != null) {
+            FinancialData.BudgetOverview budget = financialData.getBudgetOverview();
+            report.append("BUDGET OVERVIEW\n---------------\n");
+            report.append("Annual Budget:     ").append(formatCurrency(budget.getAnnualBudget())).append("\n");
+            report.append("Utilized:          ").append(formatCurrency(budget.getUtilized())).append("\n");
+            report.append("Remaining:         ").append(formatCurrency(budget.getRemaining())).append("\n");
+            report.append("Utilization Rate:  ").append(String.format("%.1f%%", budget.getUtilizationRate())).append("\n\n");
 
-        LinearLayout container = new LinearLayout(requireContext());
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(50, 40, 50, 40);
-
-        TextView currentLabel = new TextView(requireContext());
-        currentLabel.setText("Current Spent: " + formatCurrency(category.getSpent()));
-        currentLabel.setTextSize(14);
-        currentLabel.setPadding(0, 0, 0, 20);
-
-        container.addView(currentLabel);
-        container.addView(input);
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Update Spent Amount")
-                .setView(container)
-                .setPositiveButton("Update", (dialog, which) -> {
-                    try {
-                        double newSpent = Double.parseDouble(input.getText().toString().trim());
-                        if (newSpent >= 0 && newSpent <= category.getAllocated()) {
-                            // Update the category budget
-                            String categoryKey = getCategoryKey(category.getCategoryName());
-                            boolean success = dataManager.updateBudgetCategory(categoryKey, newSpent);
-
-                            if (success) {
-                                Toast.makeText(requireContext(), "Spent amount updated successfully", Toast.LENGTH_SHORT).show();
-                                loadFinancialData(); // Refresh the data
-                            } else {
-                                Toast.makeText(requireContext(), "Failed to update spent amount", Toast.LENGTH_SHORT).show();
-                            }
-                        } else {
-                            Toast.makeText(requireContext(), "Amount must be between 0 and allocated budget", Toast.LENGTH_SHORT).show();
-                        }
-                    } catch (NumberFormatException e) {
-                        Toast.makeText(requireContext(), "Please enter a valid amount", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private String getCategoryKey(String categoryName) {
-        switch (categoryName) {
-            case "Staff Salaries": return "staff";
-            case "Medicines & Supplies": return "medicines";
-            case "Medical Equipment": return "equipment";
-            case "Infrastructure": return "infrastructure";
-            case "Training & Development": return "training";
-            default: return "other";
+            if (!categoryBudgets.isEmpty()) {
+                report.append("EXPENSE BREAKDOWN\n-----------------\n");
+                for (FinancialData.CategoryBudget cat : categoryBudgets) {
+                    report.append("• ").append(cat.getCategoryName()).append("\n");
+                    report.append("  Spent: ").append(formatCurrency(cat.getSpent())).append("\n\n");
+                }
+            } else {
+                report.append("No expenses recorded yet.\n");
+            }
+        } else {
+            report.append("No budget data available.\n");
+            report.append("Use 'Manage Budget' to set an annual budget first.\n");
         }
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Financial Report - ASHA Connect");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, report.toString());
+        startActivity(Intent.createChooser(shareIntent, "Share Financial Report via"));
     }
 
-    // Public methods for external access
-    public void refreshFinancialData() {
-        loadFinancialData();
+    @Override
+    public void onBudgetCategoryClick(FinancialData.CategoryBudget category) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle(category.getCategoryName())
+                .setMessage("Amount Spent: " + formatCurrency(category.getSpent()) +
+                        (category.getAllocated() > 0 ? "\nAllocated: " + formatCurrency(category.getAllocated()) : ""))
+                .setPositiveButton("OK", null)
+                .setNeutralButton("Update Expense", (d, w) -> showExpenseAmountDialog(category.getCategoryName()))
+                .show();
     }
+
+    @Override
+    public void onBudgetCategoryLongClick(FinancialData.CategoryBudget category) {
+        showExpenseAmountDialog(category.getCategoryName());
+    }
+
+    public void refreshFinancialData() { loadFinancialData(); }
 }

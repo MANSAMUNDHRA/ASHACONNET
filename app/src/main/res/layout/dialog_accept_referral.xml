@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Accept Referral"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/color_text"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Diagnosis"
+        android:textSize="14sp"
+        android:textColor="@color/color_text"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/et_diagnosis"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter diagnosis"
+        android:padding="12dp"
+        android:background="@drawable/edit_text_background"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Prescription"
+        android:textSize="14sp"
+        android:textColor="@color/color_text"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/et_prescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter prescription"
+        android:padding="12dp"
+        android:background="@drawable/edit_text_background"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Follow-up Date"
+        android:textSize="14sp"
+        android:textColor="@color/color_text"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/et_follow_up_date"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="YYYY-MM-DD"
+        android:padding="12dp"
+        android:background="@drawable/edit_text_background"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Additional Notes"
+        android:textSize="14sp"
+        android:textColor="@color/color_text"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/et_additional_notes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter additional notes"
+        android:padding="12dp"
+        android:background="@drawable/edit_text_background"
+        android:layout_marginBottom="16dp"
+        android:lines="3" />
+
+</LinearLayout>

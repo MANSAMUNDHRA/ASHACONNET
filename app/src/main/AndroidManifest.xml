@@ -11,6 +11,8 @@
         android:roundIcon="@drawable/lady"
         android:supportsRtl="true"
         android:theme="@style/Theme.SihAsha">
+        <activity android:name=".SignupActivity" />
+
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -20,6 +22,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+<!-- <activity android:name=".SignupActivity" /> -->
 
         <activity
             android:name=".add_inventory"

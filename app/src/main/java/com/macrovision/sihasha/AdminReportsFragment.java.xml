@@ -1,0 +1,232 @@
+package com.macrovision.sihasha.fragments;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
+import com.macrovision.sihasha.R;
+import com.macrovision.sihasha.models.FinancialData;
+import com.macrovision.sihasha.models.Patient;
+import com.macrovision.sihasha.models.User;
+import com.macrovision.sihasha.utils.DataManager;
+import com.macrovision.sihasha.utils.SharedPrefsManager;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+public class AdminReportsFragment extends Fragment {
+
+    private DataManager dataManager;
+    private User currentUser;
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        // Reuse financial layout — it has a generate report button we can repurpose,
+        // but easier to build a simple dedicated view programmatically.
+        // Use a LinearLayout with buttons for each report type.
+        View view = inflater.inflate(R.layout.fragment_admin_reports, container, false);
+
+        dataManager = DataManager.getInstance(requireContext());
+        currentUser = new SharedPrefsManager(requireContext()).getCurrentUser();
+
+        setupButtons(view);
+        return view;
+    }
+
+    private void setupButtons(View view) {
+        Button btnPatientReport = view.findViewById(R.id.btn_patient_report);
+        Button btnStaffReport = view.findViewById(R.id.btn_staff_report);
+        Button btnInventoryReport = view.findViewById(R.id.btn_inventory_report);
+        Button btnFinancialReport = view.findViewById(R.id.btn_financial_report);
+        Button btnFullReport = view.findViewById(R.id.btn_full_report);
+
+        if (btnPatientReport != null)
+            btnPatientReport.setOnClickListener(v -> shareReport("Patient Report", buildPatientReport()));
+        if (btnStaffReport != null)
+            btnStaffReport.setOnClickListener(v -> shareReport("Staff Report", buildStaffReport()));
+        if (btnInventoryReport != null)
+            btnInventoryReport.setOnClickListener(v -> shareReport("Inventory Report", buildInventoryReport()));
+        if (btnFinancialReport != null)
+            btnFinancialReport.setOnClickListener(v -> shareReport("Financial Report", buildFinancialReport()));
+        if (btnFullReport != null)
+            btnFullReport.setOnClickListener(v -> shareReport("Full PHC Report",
+                    buildPatientReport() + "\n\n" + buildStaffReport() + "\n\n" + buildInventoryReport() + "\n\n" + buildFinancialReport()));
+    }
+
+    private void shareReport(String title, String content) {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, title + " - ASHA Connect");
+        intent.putExtra(Intent.EXTRA_TEXT, content);
+        startActivity(Intent.createChooser(intent, "Share " + title + " via"));
+    }
+
+    private String header(String title) {
+        String date = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(new Date());
+        String admin = currentUser != null ? currentUser.getName() : "PHC Admin";
+        return "========================================\n" +
+               "      ASHA CONNECT - PHC REPORT\n" +
+               "========================================\n" +
+               "Report:  " + title + "\n" +
+               "Admin:   " + admin + "\n" +
+               "Date:    " + date + "\n" +
+               "========================================\n\n";
+    }
+
+    private String buildPatientReport() {
+        List<Patient> patients = dataManager.getAllPatients();
+        int total = patients.size(), pregnant = 0, delivered = 0, highRisk = 0, postpartum = 0;
+        for (Patient p : patients) {
+            String status = p.getPregnancyStatus() != null ? p.getPregnancyStatus() : "";
+            if (status.equals("pregnant")) pregnant++;
+            else if (status.equals("delivered")) delivered++;
+            else if (status.equals("postpartum")) postpartum++;
+            if (p.isHighRisk()) highRisk++;
+        }
+
+        StringBuilder sb = new StringBuilder(header("Patient Report"));
+        sb.append("OVERVIEW\n--------\n");
+        sb.append("Total Patients:    ").append(total).append("\n");
+        sb.append("Pregnant:          ").append(pregnant).append("\n");
+        sb.append("Delivered:         ").append(delivered).append("\n");
+        sb.append("Postpartum:        ").append(postpartum).append("\n");
+        sb.append("High Risk:         ").append(highRisk).append("\n\n");
+
+        if (patients.isEmpty()) {
+            sb.append("No patients registered yet.\n");
+        } else {
+            sb.append("PATIENT LIST\n------------\n");
+            for (int i = 0; i < patients.size(); i++) {
+                Patient p = patients.get(i);
+                sb.append(i + 1).append(". ").append(p.getName()).append("\n");
+                sb.append("   Age: ").append(p.getAge());
+                if (p.getVillage() != null) sb.append(" | Village: ").append(p.getVillage());
+                sb.append("\n   Status: ").append(p.getPregnancyStatus() != null ? p.getPregnancyStatus() : "N/A");
+                if (p.isHighRisk()) sb.append(" ⚠ HIGH RISK");
+                sb.append("\n\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    private String buildStaffReport() {
+        List<User> users = dataManager.getAllUsers();
+        int asha = 0, doctor = 0, nurse = 0, admin = 0;
+        for (User u : users) {
+            String role = u.getRole() != null ? u.getRole() : "";
+            switch (role) {
+                case "asha": asha++; break;
+                case "phcdoctor": doctor++; break;
+                case "phcnurse": nurse++; break;
+                case "phcadmin": admin++; break;
+            }
+        }
+
+        StringBuilder sb = new StringBuilder(header("Staff Report"));
+        sb.append("SUMMARY\n-------\n");
+        sb.append("Total Staff:    ").append(users.size()).append("\n");
+        sb.append("ASHA Workers:   ").append(asha).append("\n");
+        sb.append("PHC Doctors:    ").append(doctor).append("\n");
+        sb.append("PHC Nurses:     ").append(nurse).append("\n");
+        sb.append("PHC Admins:     ").append(admin).append("\n\n");
+
+        if (users.isEmpty()) {
+            sb.append("No staff registered yet.\n");
+        } else {
+            sb.append("STAFF LIST\n----------\n");
+            for (int i = 0; i < users.size(); i++) {
+                User u = users.get(i);
+                sb.append(i + 1).append(". ").append(u.getName()).append("\n");
+                sb.append("   Role: ").append(getRoleDisplay(u.getRole())).append("\n");
+                sb.append("   Phone: ").append(u.getPhone() != null && !u.getPhone().isEmpty() ? u.getPhone() : "N/A").append("\n");
+                if (u.getVillage() != null && !u.getVillage().isEmpty())
+                    sb.append("   Village: ").append(u.getVillage()).append("\n");
+                sb.append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    private String buildInventoryReport() {
+        var items = dataManager.getAllInventoryItems();
+        var lowStock = dataManager.getLowStockItems();
+
+        StringBuilder sb = new StringBuilder(header("Inventory Report"));
+        sb.append("SUMMARY\n-------\n");
+        sb.append("Total Items:    ").append(items.size()).append("\n");
+        sb.append("Low Stock:      ").append(lowStock.size()).append("\n\n");
+
+        if (items.isEmpty()) {
+            sb.append("No inventory items added yet.\n");
+        } else {
+            sb.append("INVENTORY LIST\n--------------\n");
+            for (int i = 0; i < items.size(); i++) {
+                var item = items.get(i);
+                sb.append(i + 1).append(". ").append(item.getName()).append("\n");
+                sb.append("   Quantity: ").append(item.getQuantity())
+                  .append(" ").append(item.getUnit() != null ? item.getUnit() : "").append("\n");
+                if (item.getExpiryDate() != null)
+                    sb.append("   Expiry: ").append(item.getExpiryDate()).append("\n");
+                if (item.getQuantity() <= item.getMinimumStock())
+                    sb.append("   ⚠ LOW STOCK\n");
+                sb.append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    private String buildFinancialReport() {
+        FinancialData fd = dataManager.getFinancialData();
+        StringBuilder sb = new StringBuilder(header("Financial Report"));
+
+        if (fd == null || fd.getBudgetOverview() == null) {
+            sb.append("No budget has been set yet.\n");
+            sb.append("Use Financial tab → Manage Budget to set annual budget.\n");
+        } else {
+            FinancialData.BudgetOverview budget = fd.getBudgetOverview();
+            sb.append("BUDGET OVERVIEW\n---------------\n");
+            sb.append("Annual Budget:    ").append(fmt(budget.getAnnualBudget())).append("\n");
+            sb.append("Utilized:         ").append(fmt(budget.getUtilized())).append("\n");
+            sb.append("Remaining:        ").append(fmt(budget.getRemaining())).append("\n");
+            sb.append("Utilization:      ").append(String.format("%.1f%%", budget.getUtilizationRate())).append("\n\n");
+
+            if (fd.getCategoryBudgets() != null && !fd.getCategoryBudgets().isEmpty()) {
+                sb.append("EXPENSE BREAKDOWN\n-----------------\n");
+                for (FinancialData.CategoryBudget cat : fd.getCategoryBudgets().values()) {
+                    sb.append("• ").append(cat.getCategoryName()).append(": ")
+                      .append(fmt(cat.getSpent())).append(" spent\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    private String fmt(double amount) {
+        if (amount >= 10000000) return String.format(Locale.getDefault(), "₹%.2f Cr", amount / 10000000);
+        if (amount >= 100000) return String.format(Locale.getDefault(), "₹%.2f L", amount / 100000);
+        return String.format(Locale.getDefault(), "₹%.0f", amount);
+    }
+
+    private String getRoleDisplay(String role) {
+        if (role == null) return "Unknown";
+        switch (role) {
+            case "asha": return "ASHA Worker";
+            case "phcdoctor": return "PHC Doctor";
+            case "phcnurse": return "PHC Nurse";
+            case "phcadmin": return "PHC Admin";
+            default: return role;
+        }
+    }
+}

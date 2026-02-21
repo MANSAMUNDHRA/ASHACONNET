@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/color_background"
+    android:background="#F5F7FA"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -15,21 +15,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="40dp">
+            android:paddingTop="20dp">
 
-            <!-- App Logo and Title -->
+            <!-- Header -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:paddingBottom="24dp">
-
-                <ImageView
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:src="@drawable/ic_healthcare_logo"
-                    android:contentDescription="App Logo" />
+                android:paddingBottom="20dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -37,26 +31,25 @@
                     android:text="ASHA Connect"
                     android:textSize="28sp"
                     android:textStyle="bold"
-                    android:textColor="@color/color_healthcare_primary"
-                    android:layout_marginTop="8dp" />
+                    android:textColor="#2196F3" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Healthcare Management System"
-                    android:textSize="14sp"
-                    android:textColor="@color/color_text_secondary"
+                    android:text="Create New Account"
+                    android:textSize="18sp"
+                    android:textColor="#757575"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
 
-            <!-- Login Card -->
+            <!-- Signup Card -->
             <androidx.cardview.widget.CardView
-                android:id="@+id/login_card"
+                android:id="@+id/signup_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="8dp"
-                app:cardBackgroundColor="@color/color_surface"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginHorizontal="16dp">
 
                 <LinearLayout
@@ -65,30 +58,13 @@
                     android:orientation="vertical"
                     android:padding="24dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Welcome Back!"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/color_text_primary"
-                        android:layout_marginBottom="4dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Login to continue"
-                        android:textSize="14sp"
-                        android:textColor="@color/color_text_secondary"
-                        android:layout_marginBottom="24dp" />
-
-                    <!-- User ID Field -->
+                    <!-- User ID -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="User ID"
                         android:textSize="14sp"
-                        android:textColor="@color/color_text_primary"
+                        android:textColor="#212121"
                         android:textStyle="bold"
                         android:layout_marginBottom="4dp" />
 
@@ -96,20 +72,41 @@
                         android:id="@+id/et_user_id"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Enter your user ID"
+                        android:hint="Enter user ID"
                         android:inputType="text"
                         android:padding="16dp"
-                        android:background="@drawable/bg_edit_text"
+                        android:background="#F8F9FA"
                         android:layout_marginBottom="16dp"
-                        android:textColorHint="@color/color_text_hint" />
+                        android:textColorHint="#9E9E9E" />
 
-                    <!-- Role Spinner -->
+                    <!-- Full Name -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Role"
+                        android:text="Full Name"
                         android:textSize="14sp"
-                        android:textColor="@color/color_text_primary"
+                        android:textColor="#212121"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <EditText
+                        android:id="@+id/et_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter your full name"
+                        android:inputType="textPersonName"
+                        android:padding="16dp"
+                        android:background="#F8F9FA"
+                        android:layout_marginBottom="16dp"
+                        android:textColorHint="#9E9E9E" />
+
+                    <!-- ✅ NEW: Role Selection -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select Role"
+                        android:textSize="14sp"
+                        android:textColor="#212121"
                         android:textStyle="bold"
                         android:layout_marginBottom="4dp" />
 
@@ -117,17 +114,17 @@
                         android:id="@+id/spinner_role"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
-                        android:background="@drawable/bg_spinner"
+                        android:background="#F8F9FA"
                         android:paddingHorizontal="16dp"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- Password Field -->
+                    <!-- Password -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Password"
                         android:textSize="14sp"
-                        android:textColor="@color/color_text_primary"
+                        android:textColor="#212121"
                         android:textStyle="bold"
                         android:layout_marginBottom="4dp" />
 
@@ -135,27 +132,46 @@
                         android:id="@+id/et_password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Enter your password"
+                        android:hint="Enter password (min 6 characters)"
                         android:inputType="textPassword"
                         android:padding="16dp"
-                        android:background="@drawable/bg_edit_text"
-                        android:layout_marginBottom="24dp"
-                        android:textColorHint="@color/color_text_hint" />
+                        android:background="#F8F9FA"
+                        android:layout_marginBottom="16dp"
+                        android:textColorHint="#9E9E9E" />
 
-                    <!-- Login Button -->
+                    <!-- Confirm Password -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Confirm Password"
+                        android:textSize="14sp"
+                        android:textColor="#212121"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <EditText
+                        android:id="@+id/et_confirm_password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Re-enter password"
+                        android:inputType="textPassword"
+                        android:padding="16dp"
+                        android:background="#F8F9FA"
+                        android:layout_marginBottom="24dp"
+                        android:textColorHint="#9E9E9E" />
+
+                    <!-- Signup Button -->
                     <Button
-                        android:id="@+id/btn_login"
+                        android:id="@+id/btn_signup"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
-                        android:text="Login"
+                        android:text="Create Account"
                         android:textSize="16sp"
                         android:textAllCaps="false"
-                        android:backgroundTint="@color/color_healthcare_primary"
-                        app:cornerRadius="28dp"
-                        android:stateListAnimator="@null"
-                        android:elevation="4dp" />
+                        android:backgroundTint="#2196F3"
+                        app:cornerRadius="28dp" />
 
-                    <!-- Progress Bar (hidden by default) -->
+                    <!-- Progress Bar -->
                     <ProgressBar
                         android:id="@+id/progress_bar"
                         android:layout_width="48dp"
@@ -164,7 +180,7 @@
                         android:visibility="gone"
                         android:layout_marginTop="16dp" />
 
-                    <!-- Signup Link -->
+                    <!-- Login Link -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -175,15 +191,15 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Don't have an account? "
-                            android:textColor="@color/color_text_secondary" />
+                            android:text="Already have an account? "
+                            android:textColor="#757575" />
 
                         <TextView
-                            android:id="@+id/tv_signup_link"
+                            android:id="@+id/tv_login_link"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Sign Up"
-                            android:textColor="@color/color_healthcare_primary"
+                            android:text="Sign In"
+                            android:textColor="#2196F3"
                             android:textStyle="bold"
                             android:clickable="true"
                             android:focusable="true" />
@@ -197,7 +213,7 @@
                 android:layout_height="wrap_content"
                 android:text="© 2025 ASHA Connect. All rights reserved."
                 android:textSize="12sp"
-                android:textColor="@color/color_text_secondary"
+                android:textColor="#757575"
                 android:gravity="center"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="16dp" />

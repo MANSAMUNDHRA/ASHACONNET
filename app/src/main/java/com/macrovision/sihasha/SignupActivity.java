@@ -2,7 +2,6 @@ package com.macrovision.sihasha;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -18,49 +17,41 @@ import androidx.cardview.widget.CardView;
 
 import com.macrovision.sihasha.models.User;
 import com.macrovision.sihasha.utils.DataManager;
-import com.macrovision.sihasha.utils.SharedPrefsManager;
 
-public class MainActivity extends AppCompatActivity {
+public class SignupActivity extends AppCompatActivity {
 
-    private EditText etUserId, etPassword;
+    private EditText etUserId, etName, etPassword, etConfirmPassword;
     private Spinner spinnerRole;
-    private Button btnLogin;
-    private TextView tvSignupLink;
+    private Button btnSignup;
+    private TextView tvLoginLink;
     private ProgressBar progressBar;
-    private CardView loginCard;
+    private CardView signupCard;
     
     private DataManager dataManager;
-    private SharedPrefsManager prefsManager;
-    
-    private String selectedRole = "asha"; // default role
+    private String selectedRole = "asha"; // default
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_signup);
 
-        // Check if user is already logged in
-        prefsManager = new SharedPrefsManager(this);
-        if (prefsManager.isLoggedIn()) {
-            navigateToDashboard();
-            return;
-        }
+        dataManager = DataManager.getInstance(this);
 
         initializeViews();
         setupRoleSpinner();
         setupClickListeners();
-        
-        dataManager = DataManager.getInstance(this);
     }
 
     private void initializeViews() {
         etUserId = findViewById(R.id.et_user_id);
+        etName = findViewById(R.id.et_name);
         etPassword = findViewById(R.id.et_password);
+        etConfirmPassword = findViewById(R.id.et_confirm_password);
         spinnerRole = findViewById(R.id.spinner_role);
-        btnLogin = findViewById(R.id.btn_login);
-        tvSignupLink = findViewById(R.id.tv_signup_link);
+        btnSignup = findViewById(R.id.btn_signup);
+        tvLoginLink = findViewById(R.id.tv_login_link);
         progressBar = findViewById(R.id.progress_bar);
-        loginCard = findViewById(R.id.login_card);
+        signupCard = findViewById(R.id.signup_card);
     }
 
     private void setupRoleSpinner() {
@@ -94,71 +85,83 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        btnLogin.setOnClickListener(v -> attemptLogin());
+        btnSignup.setOnClickListener(v -> registerUser());
         
-        tvSignupLink.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, SignupActivity.class);
+        tvLoginLink.setOnClickListener(v -> {
+            Intent intent = new Intent(SignupActivity.this, MainActivity.class);
             startActivity(intent);
+            finish();
         });
     }
 
-    private void attemptLogin() {
-        // Get input values
+    private void registerUser() {
         String userId = etUserId.getText().toString().trim();
+        String name = etName.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
+        String confirmPassword = etConfirmPassword.getText().toString().trim();
 
-        // Validate inputs
-        if (TextUtils.isEmpty(userId)) {
-            etUserId.setError("User ID is required");
-            etUserId.requestFocus();
+        // Validation
+        if (userId.isEmpty() || name.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+            Toast.makeText(this, "All fields required", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (TextUtils.isEmpty(password)) {
-            etPassword.setError("Password is required");
-            etPassword.requestFocus();
+        if (!password.equals(confirmPassword)) {
+            Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Show progress
+        if (password.length() < 6) {
+            Toast.makeText(this, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         showProgress(true);
 
-        // Attempt login
-        User user = dataManager.authenticateUser(userId, selectedRole, password);
+        // Create user with selected role
+        User newUser = new User(
+                userId,
+                name,
+                selectedRole,  // ✅ Now uses selected role
+                "", // phone
+                "", // village
+                "", // block
+                "", // district
+                "West Bengal", // state
+                "PHC001", // phcId
+                password
+        );
 
-        if (user != null) {
-            // Login successful
-            Toast.makeText(this, "✅ Login Successful! Welcome " + user.getName(), Toast.LENGTH_SHORT).show();
-            
-            // ✅ FIXED: Use setCurrentUser() (matches your SharedPrefsManager)
-            prefsManager.setCurrentUser(user);
-            prefsManager.setLoggedIn(true);
-            
-            // Navigate to dashboard
-            navigateToDashboard();
+        boolean success = dataManager.registerUser(newUser);
+
+        if (success) {
+            Toast.makeText(this, "✅ " + getRoleDisplayName(selectedRole) + " Registered Successfully", Toast.LENGTH_SHORT).show();
+            finish(); // Go back to login
         } else {
-            // Login failed
             showProgress(false);
-            Toast.makeText(this, "❌ Invalid credentials or role", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "❌ User ID already exists", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void navigateToDashboard() {
-        Intent intent = new Intent(MainActivity.this, activity_dashboard.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+    private String getRoleDisplayName(String role) {
+        switch (role) {
+            case "asha": return "ASHA Worker";
+            case "phcdoctor": return "PHC Doctor";
+            case "phcnurse": return "PHC Nurse";
+            case "phcadmin": return "PHC Administrator";
+            default: return "User";
+        }
     }
 
     private void showProgress(boolean show) {
         if (show) {
             progressBar.setVisibility(View.VISIBLE);
-            btnLogin.setVisibility(View.GONE);
-            loginCard.setAlpha(0.7f);
+            btnSignup.setVisibility(View.GONE);
+            signupCard.setAlpha(0.7f);
         } else {
             progressBar.setVisibility(View.GONE);
-            btnLogin.setVisibility(View.VISIBLE);
-            loginCard.setAlpha(1.0f);
+            btnSignup.setVisibility(View.VISIBLE);
+            signupCard.setAlpha(1.0f);
         }
     }
 }

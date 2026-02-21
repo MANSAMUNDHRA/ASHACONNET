@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/color_background"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="@color/color_background">
 
     <!-- Header -->
     <LinearLayout
@@ -18,16 +17,16 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Staff Management"
+            android:text="Patient Referrals"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@color/color_text" />
 
         <TextView
-            android:id="@+id/tv_staff_count"
+            android:id="@+id/tv_referral_count"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0 staff"
+            android:text="0 patients"
             android:textSize="14sp"
             android:textColor="@color/color_healthcare_primary"
             android:background="@drawable/count_badge_background"
@@ -35,36 +34,18 @@
             android:paddingVertical="4dp" />
     </LinearLayout>
 
-    <!-- Action Buttons -->
-    <LinearLayout
+    <!-- Toggle Button -->
+    <Button
+        android:id="@+id/btn_refer_patient"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
-
-        <Button
-            android:id="@+id/btn_add_staff"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:text="Add Staff"
-            android:textSize="12sp"
-            android:layout_marginEnd="8dp"
-            android:backgroundTint="@color/color_success" />
-
-        <Button
-            android:id="@+id/btn_refresh"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:text="Refresh"
-            android:textSize="12sp"
-            android:backgroundTint="@color/color_healthcare_primary" />
-    </LinearLayout>
+        android:layout_height="48dp"
+        android:text="Show Referred Patients"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/color_healthcare_primary" />
 
     <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_staff"
+        android:id="@+id/recycler_referrals"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -83,23 +64,15 @@
         <ImageView
             android:layout_width="80dp"
             android:layout_height="80dp"
-            android:src="@drawable/ic_no_staff"
+            android:src="@drawable/ic_no_referrals"
             android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="No staff members found"
+            android:text="No patients found"
             android:textSize="16sp"
             android:textColor="@color/color_text_secondary" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Staff will appear here when users register"
-            android:textSize="12sp"
-            android:textColor="@color/color_text_secondary"
-            android:layout_marginTop="8dp" />
     </LinearLayout>
 
 </LinearLayout>

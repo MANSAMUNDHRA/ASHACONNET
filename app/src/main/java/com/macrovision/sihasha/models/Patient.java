@@ -33,6 +33,13 @@ public class Patient {
     private boolean isHighRisk;
     private String assignedDoctor;
     private String lastVisit;
+    
+    // ✅ NEW: Referral fields
+    private boolean isReferred;
+    private String referredTo;      // Doctor ID
+    private String referredBy;      // ASHA ID
+    private String referralDate;
+    private String referralStatus;  // "pending", "accepted", "rejected"
 
     // Constructors
     public Patient() {}
@@ -48,6 +55,8 @@ public class Patient {
         this.ashaId = ashaId;
         this.phcId = phcId;
         this.isHighRisk = isHighRisk;
+        this.isReferred = false; // Default not referred
+        this.referralStatus = "none";
     }
 
     // Getters and Setters
@@ -146,4 +155,20 @@ public class Patient {
 
     public String getLastVisit() { return lastVisit; }
     public void setLastVisit(String lastVisit) { this.lastVisit = lastVisit; }
+
+    // ✅ NEW: Referral getters and setters
+    public boolean isReferred() { return isReferred; }
+    public void setReferred(boolean referred) { isReferred = referred; }
+
+    public String getReferredTo() { return referredTo; }
+    public void setReferredTo(String referredTo) { this.referredTo = referredTo; }
+
+    public String getReferredBy() { return referredBy; }
+    public void setReferredBy(String referredBy) { this.referredBy = referredBy; }
+
+    public String getReferralDate() { return referralDate; }
+    public void setReferralDate(String referralDate) { this.referralDate = referralDate; }
+
+    public String getReferralStatus() { return referralStatus; }
+    public void setReferralStatus(String referralStatus) { this.referralStatus = referralStatus; }
 }
