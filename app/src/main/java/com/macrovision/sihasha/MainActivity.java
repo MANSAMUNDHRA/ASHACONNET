@@ -12,6 +12,7 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.macrovision.sihasha.utils.FirebaseHelper;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
@@ -103,46 +104,48 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void attemptLogin() {
-        // Get input values
-        String userId = etUserId.getText().toString().trim();
-        String password = etPassword.getText().toString().trim();
+    String userId = etUserId.getText().toString().trim();
+    String password = etPassword.getText().toString().trim();
 
-        // Validate inputs
-        if (TextUtils.isEmpty(userId)) {
-            etUserId.setError("User ID is required");
-            etUserId.requestFocus();
-            return;
-        }
-
-        if (TextUtils.isEmpty(password)) {
-            etPassword.setError("Password is required");
-            etPassword.requestFocus();
-            return;
-        }
-
-        // Show progress
-        showProgress(true);
-
-        // Attempt login
-        User user = dataManager.authenticateUser(userId, selectedRole, password);
-
-        if (user != null) {
-            // Login successful
-            Toast.makeText(this, "✅ Login Successful! Welcome " + user.getName(), Toast.LENGTH_SHORT).show();
-            
-            // ✅ FIXED: Use setCurrentUser() (matches your SharedPrefsManager)
-            prefsManager.setCurrentUser(user);
-            prefsManager.setLoggedIn(true);
-            
-            // Navigate to dashboard
-            navigateToDashboard();
-        } else {
-            // Login failed
-            showProgress(false);
-            Toast.makeText(this, "❌ Invalid credentials or role", Toast.LENGTH_LONG).show();
-        }
+    if (TextUtils.isEmpty(userId)) {
+        etUserId.setError("User ID is required");
+        etUserId.requestFocus();
+        return;
     }
 
+    if (TextUtils.isEmpty(password)) {
+        etPassword.setError("Password is required");
+        etPassword.requestFocus();
+        return;
+    }
+
+    showProgress(true);
+
+    // Use Firebase for authentication
+    FirebaseHelper.getInstance(this).loginUser(userId, password, 
+        new FirebaseHelper.AuthCallback() {
+            @Override
+            public void onSuccess(User user) {
+                showProgress(false);
+                Toast.makeText(MainActivity.this, 
+                    "✅ Login Successful! Welcome " + user.getName(), 
+                    Toast.LENGTH_SHORT).show();
+                
+                prefsManager.setCurrentUser(user);
+                prefsManager.setLoggedIn(true);
+                
+                navigateToDashboard();
+            }
+            
+            @Override
+            public void onFailure(String error) {
+                showProgress(false);
+                Toast.makeText(MainActivity.this, 
+                    "❌ Login failed: " + error, 
+                    Toast.LENGTH_LONG).show();
+            }
+        });
+}
     private void navigateToDashboard() {
         Intent intent = new Intent(MainActivity.this, activity_dashboard.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

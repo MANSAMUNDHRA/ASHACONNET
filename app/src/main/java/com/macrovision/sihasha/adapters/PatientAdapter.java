@@ -4,16 +4,19 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.macrovision.sihasha.R;
 import com.macrovision.sihasha.models.Patient;
+
 import java.util.List;
 
 public class PatientAdapter extends RecyclerView.Adapter<PatientAdapter.ViewHolder> {
 
+    private static final String TAG = "PatientAdapter";
     private List<Patient> patients;
     private OnPatientClickListener listener;
 
@@ -25,77 +28,82 @@ public class PatientAdapter extends RecyclerView.Adapter<PatientAdapter.ViewHold
     public PatientAdapter(List<Patient> patients, OnPatientClickListener listener) {
         this.patients = patients;
         this.listener = listener;
-        Log.d("PatientAdapter", "Constructor: " + patients.size() + " patients");
+        Log.d(TAG, "Adapter created with " + (patients != null ? patients.size() : 0) + " patients");
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        Log.d("PatientAdapter", "onCreateViewHolder called");
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.activity_item_patient_card, parent, false); // ✅ Fixed layout name
-        return new ViewHolder(view);
+        try {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.activity_item_patient_card, parent, false);
+            return new ViewHolder(view);
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating view holder: " + e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Patient patient = patients.get(position);
-        Log.d("PatientAdapter", "Binding patient at position " + position + ": " + patient.getName());
-        holder.bind(patient, listener);
-    }
-
-    @Override
-    public int getItemCount() {
-        Log.d("PatientAdapter", "getItemCount: " + patients.size());
-        return patients.size();
-    }
-
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        private TextView tvPatientName, tvPatientAge, tvPatientVillage,
-                tvPatientPhone, tvPatientEdd, tvPregnancyStatus;
-        private LinearLayout layoutEdd;
-
-        public ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvPatientName = itemView.findViewById(R.id.tv_patient_name);
-            tvPatientAge = itemView.findViewById(R.id.tv_patient_age);
-            tvPatientVillage = itemView.findViewById(R.id.tv_patient_village);
-            tvPatientPhone = itemView.findViewById(R.id.tv_patient_phone);
-            tvPatientEdd = itemView.findViewById(R.id.tv_patient_edd);
-            tvPregnancyStatus = itemView.findViewById(R.id.tv_pregnancy_status);
-            layoutEdd = itemView.findViewById(R.id.layout_edd); // ✅ Added this
-        }
-
-        public void bind(Patient patient, OnPatientClickListener listener) {
-            Log.d("PatientAdapter", "Binding patient: " + patient.getName());
-
-            tvPatientName.setText(patient.getName());
-            tvPatientAge.setText(patient.getAge() + " years");
-            tvPatientVillage.setText(patient.getVillage());
-            tvPatientPhone.setText(patient.getPhoneNumber());
-            tvPregnancyStatus.setText(patient.getPregnancyStatus());
-
-            // ✅ Fixed EDD handling
-            if ("pregnant".equals(patient.getPregnancyStatus()) && patient.getEddDate() != null) {
-                tvPatientEdd.setText(patient.getEddDate());
-                layoutEdd.setVisibility(View.VISIBLE);
-            } else {
-                layoutEdd.setVisibility(View.GONE);
+        try {
+            if (patients == null || position >= patients.size()) {
+                Log.e(TAG, "Invalid position or patients list");
+                return;
             }
-
-            // Set click listeners
-            itemView.setOnClickListener(v -> {
+            
+            Patient patient = patients.get(position);
+            if (patient == null) {
+                Log.e(TAG, "Patient is null at position " + position);
+                return;
+            }
+            
+            Log.d(TAG, "Binding patient at position " + position + ": " + patient.getName());
+            
+            holder.tvPatientName.setText(patient.getName() != null ? patient.getName() : "Unknown");
+            holder.tvPatientAge.setText(patient.getAge() + " years");
+            holder.tvPatientVillage.setText(patient.getVillage() != null ? patient.getVillage() : "N/A");
+            holder.tvPatientPhone.setText(patient.getPhoneNumber() != null ? patient.getPhoneNumber() : "N/A");
+            
+            // Handle item clicks
+            holder.itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onPatientClick(patient);
                 }
             });
-
-            itemView.setOnLongClickListener(v -> {
+            
+            holder.itemView.setOnLongClickListener(v -> {
                 if (listener != null) {
                     listener.onPatientLongClick(patient);
                 }
                 return true;
             });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error binding view holder: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public int getItemCount() {
+        return patients != null ? patients.size() : 0;
+    }
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView tvPatientName, tvPatientAge, tvPatientVillage, tvPatientPhone;
+
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            try {
+                tvPatientName = itemView.findViewById(R.id.tv_patient_name);
+                tvPatientAge = itemView.findViewById(R.id.tv_patient_age);
+                tvPatientVillage = itemView.findViewById(R.id.tv_patient_village);
+                tvPatientPhone = itemView.findViewById(R.id.tv_patient_phone);
+                
+                Log.d(TAG, "View holder views initialized");
+            } catch (Exception e) {
+                Log.e(TAG, "Error initializing view holder: " + e.getMessage(), e);
+            }
         }
     }
 }

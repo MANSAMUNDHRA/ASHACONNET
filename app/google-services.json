@@ -1,0 +1,29 @@
+  {
+    "project_info": {
+      "project_number": "415360470896",
+      "project_id": "asha-connect-a1f72",
+      "storage_bucket": "asha-connect-a1f72.firebasestorage.app"
+    },
+    "client": [
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:415360470896:android:584197481e8b73e55e49b5",
+          "android_client_info": {
+            "package_name": "com.macrovision.sihasha"
+          }
+        },
+        "oauth_client": [],
+        "api_key": [
+          {
+            "current_key": "AIzaSyA2NEJQ2kSmoWSsa5ieNPWv6Odicqdc4Vk"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": []
+          }
+        }
+      }
+    ],
+    "configuration_version": "1"
+  }

@@ -27,7 +27,7 @@ public class DataManager {
     private static final String INVENTORY_KEY = "inventory_data";
     private static final String STAFF_KEY = "staff_data";
     // Bump this number any time you want to wipe stale SharedPreferences data
-    private static final int DATA_VERSION = 2;
+    private static final int DATA_VERSION = 3; // Incremented for Firebase
     private static final String DATA_VERSION_KEY = "data_version";
 
     private Context context;
@@ -40,11 +40,43 @@ public class DataManager {
     private static DataManager instance;
     private Gson gson;
     private SharedPreferences prefs;
+    
+    // Firebase helper
+    private FirebaseHelper firebaseHelper;
+    private boolean isOnline = false;
+
+    // ✅ Listener so UI can react when Firebase pushes updates
+    public interface OnDataChangedListener {
+        void onPatientsChanged();
+        void onUsersChanged();
+    }
+    private final java.util.List<OnDataChangedListener> dataListeners = new java.util.ArrayList<>();
+
+    public void addDataListener(OnDataChangedListener listener) {
+        if (!dataListeners.contains(listener)) dataListeners.add(listener);
+    }
+    public void removeDataListener(OnDataChangedListener listener) {
+        dataListeners.remove(listener);
+    }
+    private void notifyPatientsChanged() {
+        for (OnDataChangedListener l : dataListeners) { try { l.onPatientsChanged(); } catch (Exception ignored) {} }
+    }
+    private void notifyUsersChanged() {
+        for (OnDataChangedListener l : dataListeners) { try { l.onUsersChanged(); } catch (Exception ignored) {} }
+    }
 
     public DataManager(Context context) {
         this.context = context.getApplicationContext();
         this.gson = new Gson();
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        
+        // Initialize Firebase separately to avoid circular dependency
+        try {
+            this.firebaseHelper = FirebaseHelper.getInstance(context);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize Firebase: " + e.getMessage());
+            this.firebaseHelper = null;
+        }
 
         // Wipe only stale non-user data when DATA_VERSION bumps.
         // NEVER clear users_data — that would delete all registered accounts.
@@ -65,6 +97,9 @@ public class DataManager {
         loadOrInitializeInventory();
         loadOrInitializeStaff();
         loadOrInitializeFinancial();
+        
+        // Start syncing with Firebase
+        startFirebaseSync();
     }
 
     public static synchronized DataManager getInstance(Context context) {
@@ -73,7 +108,251 @@ public class DataManager {
         }
         return instance;
     }
+    
+    private void startFirebaseSync() {
+        if (firebaseHelper == null) {
+            Log.w(TAG, "FirebaseHelper is null, skipping sync");
+            return;
+        }
+        
+        try {
+            // Sync patients from Firebase
+            firebaseHelper.syncPatients(new FirebaseHelper.PatientsCallback() {
+                @Override
+                public void onSuccess(List<Patient> firebasePatients) {
+                    if (firebasePatients != null) {
+                        isOnline = true;
+                        if (!firebasePatients.isEmpty()) {
+                            mergePatients(firebasePatients);
+                            notifyPatientsChanged(); // ✅ Tell UI to refresh
+                        }
+                    }
+                }
+                
+                @Override
+                public void onFailure(String error) {
+                    isOnline = false;
+                    Log.w(TAG, "Firebase sync failed, using offline data: " + error);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting Firebase sync: " + e.getMessage());
+            isOnline = false;
+        }
+        
+        try {
+            // Sync users from Firebase
+            firebaseHelper.syncUsers(new FirebaseHelper.UsersCallback() {
+                @Override
+                public void onSuccess(List<User> firebaseUsers) {
+                    if (firebaseUsers != null) {
+                        isOnline = true;
+                        if (!firebaseUsers.isEmpty()) {
+                            mergeUsers(firebaseUsers);
+                            // Also update staff list
+                            updateStaffListFromUsers(firebaseUsers);
+                        }
+                    }
+                }
+                
+                @Override
+                public void onFailure(String error) {
+                    isOnline = false;
+                    Log.w(TAG, "Firebase user sync failed: " + error);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting user sync: " + e.getMessage());
+            isOnline = false;
+        }
+        
+        // Refresh users after a delay
+        try {
+            android.os.Handler handler = new android.os.Handler();
+            handler.postDelayed(() -> {
+                refreshUsersFromFirebase();
+            }, 2000);
+        } catch (Exception e) {
+            Log.e(TAG, "Error scheduling refresh: " + e.getMessage());
+        }
+    }
+    
+    private void mergePatients(List<Patient> firebasePatients) {
+        if (patients == null) patients = new ArrayList<>();
+        
+        // Create a map of existing patients by ID
+        Map<String, Patient> patientMap = new HashMap<>();
+        for (Patient p : patients) {
+            patientMap.put(p.getId(), p);
+        }
+        
+        // Add or update from Firebase
+        for (Patient fbPatient : firebasePatients) {
+            patientMap.put(fbPatient.getId(), fbPatient);
+        }
+        
+        // Convert back to list
+        patients.clear();
+        patients.addAll(patientMap.values());
+        savePatientsToStorage();
+        Log.d(TAG, "Merged " + patients.size() + " patients from Firebase");
+    }
+    
+    private void mergeUsers(List<User> firebaseUsers) {
+        if (users == null) users = new ArrayList<>();
+        
+        // Create a map of existing users by ID
+        Map<String, User> userMap = new HashMap<>();
+        for (User u : users) {
+            userMap.put(u.getId(), u);
+        }
+        
+        // Add or update from Firebase
+        for (User fbUser : firebaseUsers) {
+            userMap.put(fbUser.getId(), fbUser);
+        }
+        
+        // Convert back to list
+        users.clear();
+        users.addAll(userMap.values());
+        saveUsersToStorage();
+        Log.d(TAG, "Merged " + users.size() + " users from Firebase");
+    }
+    
+    public void refreshUsersFromFirebase() {
+    if (firebaseHelper == null) {
+        Log.w(TAG, "FirebaseHelper is null, cannot refresh");
+        return;
+    }
+    
+    Log.d(TAG, "Refreshing users from Firebase...");
+    
+    firebaseHelper.syncUsers(new FirebaseHelper.UsersCallback() {
+        @Override
+        public void onSuccess(List<User> firebaseUsers) {
+            if (firebaseUsers != null && !firebaseUsers.isEmpty()) {
+                Log.d(TAG, "Received " + firebaseUsers.size() + " users from Firebase");
+                
+                // Merge Firebase users with local users
+                mergeUsers(firebaseUsers);
+                
+                // Force update staff list from these users
+                staffList = new ArrayList<>();
+                for (User user : users) {
+                    staffList.add(convertUserToStaff(user));
+                }
+                saveStaffToStorage();
+                
+                Log.d(TAG, "Staff list updated from Firebase: " + staffList.size() + " staff members");
+            } else {
+                Log.w(TAG, "No users received from Firebase");
+            }
+        }
+        
+        @Override
+        public void onFailure(String error) {
+            Log.e(TAG, "Failed to refresh users: " + error);
+        }
+    });
+}
+    
+    public void refreshPatientsFromFirebase() {
+    if (firebaseHelper == null) {
+        Log.w(TAG, "FirebaseHelper is null, cannot refresh patients");
+        return;
+    }
+    
+    Log.d(TAG, "Refreshing patients from Firebase...");
+    
+    firebaseHelper.syncPatients(new FirebaseHelper.PatientsCallback() {
+        @Override
+        public void onSuccess(List<Patient> firebasePatients) {
+            if (firebasePatients != null && !firebasePatients.isEmpty()) {
+                Log.d(TAG, "Received " + firebasePatients.size() + " patients from Firebase");
+                
+                // Use existing mergePatients method
+                if (patients == null) patients = new ArrayList<>();
+                
+                // Create a map of existing patients by ID
+                java.util.Map<String, Patient> patientMap = new java.util.HashMap<>();
+                for (Patient p : patients) {
+                    patientMap.put(p.getId(), p);
+                }
+                
+                // Add or update from Firebase
+                for (Patient fbPatient : firebasePatients) {
+                    patientMap.put(fbPatient.getId(), fbPatient);
+                }
+                
+                // Convert back to list
+                patients.clear();
+                patients.addAll(patientMap.values());
+                savePatientsToStorage();
+                
+                Log.d(TAG, "Merged " + patients.size() + " patients from Firebase");
+            } else {
+                Log.d(TAG, "No patients received from Firebase");
+            }
+        }
+        
+        @Override
+        public void onFailure(String error) {
+            Log.e(TAG, "Failed to refresh patients: " + error);
+        }
+    });
+}
+    private void updateStaffListFromUsers(List<User> userList) {
+        if (userList == null) return;
+        
+        // Clear existing staff list
+        if (staffList == null) {
+            staffList = new ArrayList<>();
+        } else {
+            staffList.clear();
+        }
+        
+        // Convert each user to staff
+        for (User user : userList) {
+            Staff staff = convertUserToStaff(user);
+            staffList.add(staff);
+        }
+        
+        saveStaffToStorage();
+        Log.d(TAG, "Staff list updated from users: " + staffList.size() + " staff members");
+    }
+    
+    private Staff convertUserToStaff(User user) {
+    Log.d(TAG, "Converting user to staff: " + user.getName() + " (" + user.getId() + ")");
+    
+    Staff staff = new Staff(
+        user.getId(),
+        user.getName(),
+        user.getRole(),
+        user.getPhone() != null ? user.getPhone() : "",
+        user.getVillage() != null ? user.getVillage() : "",
+        user.getDistrict() != null ? user.getDistrict() : ""
+    );
+    
+    staff.setBlock(user.getBlock());
+    staff.setState(user.getState());
+    staff.setPhcId(user.getPhcId());
+    staff.setStatus("active");
+    
+    // Add role-specific display info
+    if ("phcdoctor".equals(user.getRole())) {
+        staff.setQualification("Doctor");
+    } else if ("phcnurse".equals(user.getRole())) {
+        staff.setQualification("Nurse");
+    } else if ("asha".equals(user.getRole())) {
+        staff.setQualification("ASHA Worker");
+    } else if ("phcadmin".equals(user.getRole())) {
+        staff.setQualification("Administrator");
+    }
+    
+    return staff;
+}
 
+    
     // ===== USER STORAGE METHODS =====
 
     private void loadOrInitializeUsers() {
@@ -104,63 +383,75 @@ public class DataManager {
     }
 
     public boolean registerUser(User user) {
-    if (users == null) users = new ArrayList<>();
+        if (users == null) users = new ArrayList<>();
 
-    // prevent duplicate ID
-    for (User u : users) {
-        if (u.getId().equals(user.getId())) {
-            Log.w(TAG, "User already exists with ID: " + user.getId());
-            return false;
+        // prevent duplicate ID
+        for (User u : users) {
+            if (u.getId().equals(user.getId())) {
+                Log.w(TAG, "User already exists with ID: " + user.getId());
+                return false;
+            }
         }
+
+        users.add(user);
+        saveUsersToStorage();
+        
+        // Try to sync to Firebase if available
+        if (firebaseHelper != null) {
+            try {
+                com.google.firebase.database.DatabaseReference userRef = 
+                    com.google.firebase.database.FirebaseDatabase.getInstance()
+                    .getReference("users").child(user.getId());
+                userRef.setValue(user);
+                Log.d(TAG, "User synced to Firebase: " + user.getName());
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to sync user to Firebase: " + e.getMessage());
+            }
+        }
+        
+        // ALSO ADD TO STAFF LIST
+        addUserToStaff(user);
+        
+        Log.d(TAG, "User registered successfully: " + user.getName());
+        return true;
     }
 
-    users.add(user);
-    saveUsersToStorage();
-    
-    // ✅ ALSO ADD TO STAFF LIST
-    addUserToStaff(user);
-    
-    Log.d(TAG, "User registered successfully: " + user.getName());
-    return true;
-}
-
-// ✅ NEW METHOD: Add user to staff list
-private void addUserToStaff(User user) {
-    Staff staff = new Staff(
-        user.getId(),
-        user.getName(),
-        user.getRole(),
-        user.getPhone() != null ? user.getPhone() : "",
-        user.getVillage() != null ? user.getVillage() : "",
-        user.getDistrict() != null ? user.getDistrict() : ""
-    );
-    
-    staff.setBlock(user.getBlock());
-    staff.setState(user.getState());
-    staff.setPhcId(user.getPhcId());
-    staff.setJoiningDate(new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
-    staff.setStatus("active");
-    
-    // Add role-specific fields
-    if ("phcdoctor".equals(user.getRole())) {
-        staff.setQualification("MBBS"); // Default, can be edited later
-        staff.setSpecialization("General Medicine");
-    } else if ("phcnurse".equals(user.getRole())) {
-        staff.setQualification("GNM");
-    } else if ("asha".equals(user.getRole())) {
-        staff.setAssignedPopulation("0");
-        staff.setAssignedFamilies("0");
-    } else if ("phcadmin".equals(user.getRole())) {
-        staff.setDesignation("Administrator");
+    private void addUserToStaff(User user) {
+        Staff staff = new Staff(
+            user.getId(),
+            user.getName(),
+            user.getRole(),
+            user.getPhone() != null ? user.getPhone() : "",
+            user.getVillage() != null ? user.getVillage() : "",
+            user.getDistrict() != null ? user.getDistrict() : ""
+        );
+        
+        staff.setBlock(user.getBlock());
+        staff.setState(user.getState());
+        staff.setPhcId(user.getPhcId());
+        staff.setJoiningDate(new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
+        staff.setStatus("active");
+        
+        // Add role-specific fields
+        if ("phcdoctor".equals(user.getRole())) {
+            staff.setQualification("MBBS");
+            staff.setSpecialization("General Medicine");
+        } else if ("phcnurse".equals(user.getRole())) {
+            staff.setQualification("GNM");
+        } else if ("asha".equals(user.getRole())) {
+            staff.setAssignedPopulation("0");
+            staff.setAssignedFamilies("0");
+        } else if ("phcadmin".equals(user.getRole())) {
+            staff.setDesignation("Administrator");
+        }
+        
+        // Add to staff list
+        if (staffList == null) {
+            staffList = new ArrayList<>();
+        }
+        staffList.add(staff);
+        saveStaffToStorage();
     }
-    
-    // Add to staff list
-    if (staffList == null) {
-        staffList = new ArrayList<>();
-    }
-    staffList.add(staff);
-    saveStaffToStorage();
-}
 
     // ===== AUTHENTICATION METHOD =====
 
@@ -212,12 +503,16 @@ private void addUserToStaff(User user) {
         }
     }
 
-    // Patient CRUD Operations
     public boolean addPatient(Patient patient) {
         try {
             if (patients == null) patients = new ArrayList<>();
             patients.add(patient);
             savePatientsToStorage();
+            
+            if (firebaseHelper != null) {
+                firebaseHelper.savePatient(patient);
+            }
+            
             Log.d(TAG, "Patient added successfully: " + patient.getName());
             return true;
         } catch (Exception e) {
@@ -234,6 +529,11 @@ private void addUserToStaff(User user) {
                 if (patients.get(i).getId().equals(updatedPatient.getId())) {
                     patients.set(i, updatedPatient);
                     savePatientsToStorage();
+                    
+                    if (firebaseHelper != null) {
+                        firebaseHelper.updatePatient(updatedPatient);
+                    }
+                    
                     Log.d(TAG, "Patient updated successfully: " + updatedPatient.getName());
                     return true;
                 }
@@ -253,6 +553,11 @@ private void addUserToStaff(User user) {
                 if (patients.get(i).getId().equals(patientId)) {
                     patients.remove(i);
                     savePatientsToStorage();
+                    
+                    if (firebaseHelper != null) {
+                        firebaseHelper.deletePatient(patientId);
+                    }
+                    
                     Log.d(TAG, "Patient deleted successfully: " + patientId);
                     return true;
                 }
@@ -317,7 +622,6 @@ private void addUserToStaff(User user) {
         return result;
     }
 
-    // Clinical queries for doctors
     public List<Patient> getHighRiskPatients() {
         List<Patient> result = new ArrayList<>();
         if (patients == null) return result;
@@ -340,6 +644,18 @@ private void addUserToStaff(User user) {
             }
         }
         return result;
+    }
+
+    public List<Patient> getHighRiskPatientsForASHA(String ashaId) {
+        List<Patient> highRiskPatients = new ArrayList<>();
+        if (patients == null || ashaId == null) return highRiskPatients;
+        
+        for (Patient patient : patients) {
+            if (ashaId.equals(patient.getAshaId()) && patient.isHighRisk()) {
+                highRiskPatients.add(patient);
+            }
+        }
+        return highRiskPatients;
     }
 
     public List<Patient> getPregnantPatients() {
@@ -401,10 +717,27 @@ private void addUserToStaff(User user) {
     }
 
     public List<Staff> getStaffList() {
-        if (staffList == null) return new ArrayList<>();
-        return new ArrayList<>(staffList);
+    // First, make sure users are loaded
+    if (users == null || users.isEmpty()) {
+        Log.w(TAG, "No users found, cannot create staff list");
+        return new ArrayList<>();
     }
-
+    
+    // Create fresh staff list from users
+    List<Staff> freshStaffList = new ArrayList<>();
+    for (User user : users) {
+        Staff staff = convertUserToStaff(user);
+        freshStaffList.add(staff);
+        Log.d(TAG, "Added staff: " + user.getName() + " (" + user.getRole() + ")");
+    }
+    
+    // Update the stored staff list
+    staffList = freshStaffList;
+    saveStaffToStorage();
+    
+    Log.d(TAG, "getStaffList returning " + staffList.size() + " staff members");
+    return new ArrayList<>(staffList);
+}
     public void addStaffMember(Staff staff) {
         if (staffList == null) staffList = new ArrayList<>();
         staffList.add(staff);
@@ -646,20 +979,6 @@ private void addUserToStaff(User user) {
         }
     }
 
-    // ===== ADDITIONAL HELPER METHODS =====
-
-    public List<Patient> getHighRiskPatientsForASHA(String ashaId) {
-        List<Patient> highRiskPatients = new ArrayList<>();
-        if (patients == null || ashaId == null) return highRiskPatients;
-        
-        for (Patient patient : patients) {
-            if (ashaId.equals(patient.getAshaId()) && patient.isHighRisk()) {
-                highRiskPatients.add(patient);
-            }
-        }
-        return highRiskPatients;
-    }
-
     // ===== UTILITY METHODS =====
 
     public int getPatientCountForUser(User user) {
@@ -703,17 +1022,11 @@ private void addUserToStaff(User user) {
                ", Staff: " + (staffList != null ? staffList.size() : 0);
     }
 
-    /**
-     * Force reload inventory from SharedPreferences to avoid stale singleton cache.
-     */
     public void refreshInventoryFromStorage() {
         loadOrInitializeInventory();
         Log.d(TAG, "Inventory refreshed from storage: " + (inventoryItems != null ? inventoryItems.size() : 0) + " items");
     }
 
-    /**
-     * Force reload all data from SharedPreferences.
-     */
     public void refreshAllFromStorage() {
         loadOrInitializeUsers();
         loadOrInitializePatients();
@@ -723,7 +1036,7 @@ private void addUserToStaff(User user) {
         Log.d(TAG, "All data refreshed. " + getStorageInfo());
     }
 
-    // Placeholder methods (to be implemented with actual features)
+    // Placeholder methods
     public List<Object> getPendingReferrals() { return new ArrayList<>(); }
     public List<Object> getScheduledVisitsForUser(String userId) { return new ArrayList<>(); }
     public List<Object> getChildrenForASHA(String ashaId) { return new ArrayList<>(); }

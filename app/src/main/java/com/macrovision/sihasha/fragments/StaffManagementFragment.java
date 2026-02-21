@@ -38,7 +38,6 @@ public class StaffManagementFragment extends Fragment {
     private SharedPrefsManager prefsManager;
     private User currentUser;
     private List<Staff> staffList = new ArrayList<>();
-    private List<Staff> displayList = new ArrayList<>();
 
     @Nullable
     @Override
@@ -50,7 +49,10 @@ public class StaffManagementFragment extends Fragment {
             setupDataManager();
             setupRecyclerView();
             setupClickListeners();
+            
+            // Load staff data
             loadStaffData();
+            
         } catch (Exception e) {
             Log.e(TAG, "Error in onCreateView", e);
             Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -60,44 +62,42 @@ public class StaffManagementFragment extends Fragment {
     }
 
     private void initializeViews(View view) {
-        try {
-            recyclerView = view.findViewById(R.id.recycler_staff);
-            tvStaffCount = view.findViewById(R.id.tv_staff_count);
-            tvNoData = view.findViewById(R.id.tv_no_data);
-            btnAddStaff = view.findViewById(R.id.btn_add_staff);
-            btnRefresh = view.findViewById(R.id.btn_refresh);
-        } catch (Exception e) {
-            Log.e(TAG, "Error initializing views", e);
-        }
+        recyclerView = view.findViewById(R.id.recycler_staff);
+        tvStaffCount = view.findViewById(R.id.tv_staff_count);
+        tvNoData = view.findViewById(R.id.tv_no_data);
+        btnAddStaff = view.findViewById(R.id.btn_add_staff);
+        btnRefresh = view.findViewById(R.id.btn_refresh);
     }
 
     private void setupDataManager() {
-        try {
-            if (getContext() != null) {
-                dataManager = DataManager.getInstance(getContext());
-                prefsManager = new SharedPrefsManager(getContext());
-                currentUser = prefsManager.getCurrentUser();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error setting up data manager", e);
+        if (getContext() != null) {
+            dataManager = DataManager.getInstance(getContext());
+            prefsManager = new SharedPrefsManager(getContext());
+            currentUser = prefsManager.getCurrentUser();
         }
     }
 
     private void setupRecyclerView() {
-        try {
-            if (recyclerView != null && getContext() != null) {
-                adapter = new StaffAdapter(displayList);
-                recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-                recyclerView.setAdapter(adapter);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error setting up recyclerView", e);
+        if (recyclerView != null && getContext() != null) {
+            adapter = new StaffAdapter(staffList);
+            recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+            recyclerView.setAdapter(adapter);
         }
     }
 
     private void setupClickListeners() {
         if (btnRefresh != null) {
-            btnRefresh.setOnClickListener(v -> loadStaffData());
+            btnRefresh.setOnClickListener(v -> {
+                // Show loading
+                if (tvNoData != null) {
+                    tvNoData.setText("Refreshing staff list...");
+                    tvNoData.setVisibility(View.VISIBLE);
+                }
+                if (recyclerView != null) recyclerView.setVisibility(View.GONE);
+                
+                // Refresh from Firebase
+                refreshFromFirebase();
+            });
         }
         
         if (btnAddStaff != null) {
@@ -106,111 +106,57 @@ public class StaffManagementFragment extends Fragment {
             });
         }
     }
+    
+    private void refreshFromFirebase() {
+        if (dataManager == null) return;
+        
+        // Force refresh users from Firebase
+        dataManager.refreshUsersFromFirebase();
+        
+        // Wait a moment for sync, then reload
+        new android.os.Handler().postDelayed(() -> {
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    loadStaffData();
+                });
+            }
+        }, 1500);
+    }
 
     private void loadStaffData() {
         try {
-            if (dataManager == null) {
-                Log.e(TAG, "DataManager is null");
-                return;
-            }
+            if (dataManager == null) return;
             
             staffList.clear();
             
-            // 1. Get all users and convert to staff format
-            List<User> users = dataManager.getAllUsers();
-            Log.d(TAG, "Found " + (users != null ? users.size() : 0) + " users");
+            // Get fresh staff list from DataManager
+            List<Staff> freshStaff = dataManager.getStaffList();
             
-            if (users != null) {
-                for (User user : users) {
-                    if (user != null) {
-                        Staff staff = convertUserToStaff(user);
-                        staffList.add(staff);
-                    }
-                }
+            if (freshStaff != null && !freshStaff.isEmpty()) {
+                staffList.addAll(freshStaff);
+                Log.d(TAG, "Loaded " + staffList.size() + " staff members");
+            } else {
+                Log.d(TAG, "No staff members found");
             }
-            
-            // 2. Also include manually added Staff records (avoid duplicates)
-            List<Staff> manualStaff = dataManager.getStaffList();
-            Log.d(TAG, "Found " + (manualStaff != null ? manualStaff.size() : 0) + " manual staff records");
-            
-            if (manualStaff != null) {
-                for (Staff s : manualStaff) {
-                    if (s == null) continue;
-                    
-                    boolean exists = false;
-                    for (Staff existing : staffList) {
-                        if (existing != null && existing.getId() != null && 
-                            existing.getId().equals(s.getId())) {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if (!exists) {
-                        staffList.add(s);
-                    }
-                }
-            }
-            
-            // Update display
-            displayList.clear();
-            displayList.addAll(staffList);
             
             // Update UI
-            if (displayList.isEmpty()) {
-                if (tvNoData != null) tvNoData.setVisibility(View.VISIBLE);
+            if (staffList.isEmpty()) {
+                if (tvNoData != null) {
+                    tvNoData.setText("No staff members found");
+                    tvNoData.setVisibility(View.VISIBLE);
+                }
                 if (recyclerView != null) recyclerView.setVisibility(View.GONE);
                 if (tvStaffCount != null) tvStaffCount.setText("0 staff members");
             } else {
                 if (tvNoData != null) tvNoData.setVisibility(View.GONE);
                 if (recyclerView != null) recyclerView.setVisibility(View.VISIBLE);
-                if (tvStaffCount != null) tvStaffCount.setText(displayList.size() + " staff members");
+                if (tvStaffCount != null) tvStaffCount.setText(staffList.size() + " staff members");
                 if (adapter != null) adapter.notifyDataSetChanged();
             }
             
-            Log.d(TAG, "Total staff loaded: " + displayList.size());
-            
         } catch (Exception e) {
             Log.e(TAG, "Error loading staff data", e);
-            Toast.makeText(getContext(), "Error loading staff: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-    }
-
-    private Staff convertUserToStaff(User user) {
-        Staff staff = new Staff(
-            user.getId() != null ? user.getId() : "",
-            user.getName() != null ? user.getName() : "Unknown",
-            user.getRole() != null ? user.getRole() : "unknown",
-            user.getPhone() != null ? user.getPhone() : "",
-            user.getVillage() != null ? user.getVillage() : "",
-            user.getDistrict() != null ? user.getDistrict() : ""
-        );
-        
-        staff.setBlock(user.getBlock());
-        staff.setState(user.getState());
-        staff.setPhcId(user.getPhcId());
-        staff.setStatus("active");
-        
-        // Set role-specific fields
-        if (user.getRole() != null) {
-            switch (user.getRole()) {
-                case "phcdoctor":
-                    staff.setQualification("MBBS");
-                    staff.setSpecialization("General Medicine");
-                    break;
-                case "phcnurse":
-                    staff.setQualification("GNM");
-                    break;
-                case "asha":
-                    staff.setAssignedPopulation("0");
-                    staff.setAssignedFamilies("0");
-                    break;
-                case "phcadmin":
-                    staff.setDesignation("Administrator");
-                    break;
-            }
-        }
-        
-        return staff;
     }
 
     @Override

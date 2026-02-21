@@ -11,6 +11,14 @@
     <string name="login">Sign In</string>
     <string name="logout">Logout</string>
 
+    <!-- Role Array for Spinner - ONLY ONE -->
+    <string-array name="roles_array">
+        <item>ASHA Worker</item>
+        <item>PHC Doctor</item>
+        <item>PHC Nurse</item>
+        <item>PHC Administrator</item>
+    </string-array>
+
     <!-- Navigation -->
     <string name="dashboard">Dashboard</string>
     <string name="patients">Patients</string>
@@ -28,14 +36,6 @@
     <string name="role_phcdoctor">PHC Doctor</string>
     <string name="role_phcnurse">PHC Nurse</string>
     <string name="role_phcadmin">PHC Administrator</string>
-
-    <!-- ✅ THIS IS THE IMPORTANT ARRAY YOUR LAYOUT NEEDS -->
-    <string-array name="roles_array">
-        <item>ASHA Worker</item>
-        <item>PHC Doctor</item>
-        <item>PHC Nurse</item>
-        <item>PHC Administrator</item>
-    </string-array>
 
     <!-- Status -->
     <string name="pregnant">Pregnant</string>

@@ -11,12 +11,12 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
 import com.macrovision.sihasha.models.User;
 import com.macrovision.sihasha.utils.DataManager;
+import com.macrovision.sihasha.utils.FirebaseHelper;
 
 public class SignupActivity extends AppCompatActivity {
 
@@ -118,11 +118,11 @@ public class SignupActivity extends AppCompatActivity {
 
         showProgress(true);
 
-        // Create user with selected role
+        // Create user object with selected role
         User newUser = new User(
                 userId,
                 name,
-                selectedRole,  // ✅ Now uses selected role
+                selectedRole, // ✅ Now uses selected role
                 "", // phone
                 "", // village
                 "", // block
@@ -132,15 +132,26 @@ public class SignupActivity extends AppCompatActivity {
                 password
         );
 
-        boolean success = dataManager.registerUser(newUser);
-
-        if (success) {
-            Toast.makeText(this, "✅ " + getRoleDisplayName(selectedRole) + " Registered Successfully", Toast.LENGTH_SHORT).show();
-            finish(); // Go back to login
-        } else {
-            showProgress(false);
-            Toast.makeText(this, "❌ User ID already exists", Toast.LENGTH_SHORT).show();
-        }
+        // Register with Firebase
+        FirebaseHelper.getInstance(this).registerUser(newUser, password, 
+            new FirebaseHelper.AuthCallback() {
+                @Override
+                public void onSuccess(User user) {
+                    showProgress(false);
+                    Toast.makeText(SignupActivity.this, 
+                        "✅ " + getRoleDisplayName(selectedRole) + " Registered Successfully", 
+                        Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+                
+                @Override
+                public void onFailure(String error) {
+                    showProgress(false);
+                    Toast.makeText(SignupActivity.this, 
+                        "❌ Registration failed: " + error, 
+                        Toast.LENGTH_LONG).show();
+                }
+            });
     }
 
     private String getRoleDisplayName(String role) {

@@ -21,6 +21,7 @@ import com.macrovision.sihasha.R;
 import com.macrovision.sihasha.models.Patient;
 import com.macrovision.sihasha.models.User;
 import com.macrovision.sihasha.utils.DataManager;
+import com.macrovision.sihasha.utils.FirebaseHelper;
 import com.macrovision.sihasha.utils.SharedPrefsManager;
 
 import java.text.SimpleDateFormat;
@@ -522,7 +523,15 @@ public class AddPatientActivity extends AppCompatActivity {
             } else {
                 // Create new patient
                 patient = new Patient();
-                String patientId = "PAT" + String.format("%03d", (int)(Math.random() * 1000));
+                // ✅ Unique ID: timestamp + first 6 chars of Firebase UID — safe across devices
+                String uid = "";
+                try {
+                    com.google.firebase.auth.FirebaseUser fbUser =
+                            com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+                    if (fbUser != null && fbUser.getUid() != null)
+                        uid = fbUser.getUid().substring(0, Math.min(6, fbUser.getUid().length()));
+                } catch (Exception ignored) {}
+                String patientId = "PAT" + System.currentTimeMillis() + uid;
                 patient.setId(patientId);
                 Log.d(TAG, "Creating new patient with ID: " + patientId);
             }
