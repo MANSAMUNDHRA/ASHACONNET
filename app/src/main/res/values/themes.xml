@@ -1,4 +1,3 @@
-<!-- Add this to your app/src/main/res/values/themes.xml or styles.xml -->
 <resources>
     <style name="Theme.SihAsha" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Enable edge-to-edge display -->
@@ -7,6 +6,8 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
+        
+        <!-- THIS SINGLE LINE FIXES THE TEXT COLOR -->
+        <item name="android:editTextColor">@android:color/black</item>
     </style>
-
 </resources>

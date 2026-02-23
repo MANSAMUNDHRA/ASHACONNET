@@ -101,7 +101,8 @@
                         android:padding="16dp"
                         android:background="@drawable/bg_edit_text"
                         android:layout_marginBottom="16dp"
-                        android:textColorHint="@color/color_text_hint" />
+                        android:textColorHint="@color/color_text_hint"
+                        android:textColor="@android:color/black" />  <!-- ADD THIS LINE -->
 
                     <!-- Role Spinner -->
                     <TextView
@@ -140,7 +141,8 @@
                         android:padding="16dp"
                         android:background="@drawable/bg_edit_text"
                         android:layout_marginBottom="24dp"
-                        android:textColorHint="@color/color_text_hint" />
+                        android:textColorHint="@color/color_text_hint"
+                        android:textColor="@android:color/black" />  <!-- ADD THIS LINE -->
 
                     <!-- Login Button -->
                     <Button

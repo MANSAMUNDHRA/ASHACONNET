@@ -89,7 +89,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPersonName"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -105,7 +107,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -123,7 +127,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textPersonName"
-                    android:background="@drawable/edit_text_background" />
+                    android:background="@drawable/edit_text_background"
+                    android:textColor="@android:color/black"
+                    android:importantForAutofill="no" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -147,7 +153,9 @@
                         android:layout_height="wrap_content"
                         android:inputType="phone"
                         android:maxLength="10"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -200,7 +208,9 @@
                     android:layout_height="wrap_content"
                     android:inputType="textMultiLine"
                     android:minLines="2"
-                    android:background="@drawable/edit_text_background" />
+                    android:background="@drawable/edit_text_background"
+                    android:textColor="@android:color/black"
+                    android:importantForAutofill="no" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -223,7 +233,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="text"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -239,7 +251,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="text"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -257,7 +271,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
-                    android:background="@drawable/edit_text_background" />
+                    android:background="@drawable/edit_text_background"
+                    android:textColor="@android:color/black"
+                    android:importantForAutofill="no" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -292,7 +308,9 @@
                         android:layout_height="wrap_content"
                         android:inputType="number"
                         android:maxLength="12"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -308,7 +326,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -457,7 +477,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@drawable/edit_text_background"
-                        android:inputType="number" />
+                        android:inputType="number"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -486,7 +508,9 @@
                         android:inputType="date"
                         android:focusable="false"
                         android:clickable="true"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -504,7 +528,9 @@
                         android:inputType="date"
                         android:focusable="false"
                         android:clickable="true"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -529,7 +555,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -545,7 +573,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -570,7 +600,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
-                        android:background="@drawable/edit_text_background" />
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@android:color/black"
+                        android:importantForAutofill="no" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
