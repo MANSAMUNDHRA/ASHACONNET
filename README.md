@@ -1,6 +1,17 @@
 # ASHAConnect — PHC Management System for Rural India
 
+[![Made in India](https://img.shields.io/badge/Made%20in-India-green)](https://india.gov.in)
+[![Smart India Hackathon](https://img.shields.io/badge/SIH-2024-orange)](https://www.sih.gov.in)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Download APK](https://img.shields.io/badge/Download-APK-brightgreen)](app-release.apk)
+
 A production-grade Android application for **India's National Health Mission**, designed to digitize and streamline Primary Health Center (PHC) operations. Built for low-connectivity rural environments with seamless offline-online sync.
+
+---
+
+## 📥 Latest Release
+
+**Version 1.0** — [Download APK](app-release.apk) (5.92 MB)
 
 ---
 
@@ -52,45 +63,6 @@ A comprehensive Android app that creates a seamless digital bridge between commu
 | **Authentication** | Firebase Authentication |
 | **Local Storage** | SharedPreferences + Gson for offline persistence |
 | **Architecture** | Offline-first with intelligent merge conflict resolution |
-| **UI Components** | RecyclerView, CardView, Fragments, Material Components |
-| **Key Libraries** | Firebase SDK, Gson, AndroidX, Material Design |
-
----
-
-## Project Structure
-
-```
-app/src/main/java/com/macrovision/sihasha/
-├── activities/
-│   ├── LoginActivity.java              # User authentication
-│   ├── SignupActivity.java              # New user registration
-│   ├── DashboardActivity.java            # Role-aware dashboard router
-│   ├── AddPatientActivity.java           # Full patient registration/edit form
-│   └── AddInventoryActivity.java         # Inventory management
-├── fragments/
-│   ├── PatientListFragment.java          # Search, filter, sort patients
-│   ├── StaffManagementFragment.java      # Staff directory
-│   ├── FinancialManagementFragment.java  # Budget tracking
-│   ├── InventoryFragment.java             # Stock management
-│   ├── AdminReportsFragment.java          # PHC analytics
-│   └── doctors/
-│       ├── DoctorHighRiskCasesFragment.java
-│       ├── DoctorHealthAnalyticsFragment.java
-│       ├── DoctorAShaSupervisionFragment.java
-│       └── DoctorReferralManagementFragment.java
-├── models/
-│   ├── Patient.java
-│   ├── User.java
-│   ├── InventoryItem.java
-│   └── FinancialData.java
-├── utils/
-│   ├── DataManager.java                  # Central data layer with Firebase sync
-│   ├── FirebaseHelper.java                # Firebase Auth + Realtime DB wrapper
-│   └── SharedPrefsManager.java            # Local session management
-└── adapters/
-    ├── PatientAdapter.java
-    └── StaffAdapter.java
-```
 
 ---
 
@@ -101,43 +73,33 @@ Built for India's inconsistent networks:
 - ✅ Data stored locally in SharedPreferences
 - ✅ Auto-syncs with Firebase when connectivity resumes
 - ✅ Firebase Realtime Database listeners ensure instant updates across all devices when online
-- ✅ Intelligent merge conflict resolution
 
 ---
 
-## Setup Instructions
+## Quick Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/ASHACONNET.git
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/MANSAMUNDHRA/ASHACONNET.git
 
-2. **Add Firebase configuration**
-   - Download `google-services.json` from [Firebase Console](https://console.firebase.google.com)
-   - Place it in `app/` directory
+# Add google-services.json from Firebase Console to /app directory
 
-3. **Configure Firebase**
-   - Enable **Email/Password** authentication
-   - Create **Realtime Database** with test mode rules:
-   ```json
-   {
-     "rules": {
-       ".read": "auth != null",
-       ".write": "auth != null"
-     }
-   }
-   ```
+# Build and install
+./gradlew installDebug
 
-4. **Build and run**
-   - Open in Android Studio
-   - Sync Gradle
-   - Run on device/emulator (API 24+)
+# Generate release APK
+./gradlew assembleRelease
+```
+
+### Firebase Setup Required:
+- Enable **Email/Password** authentication
+- Create **Realtime Database** with test mode rules
 
 ---
 
 ## Built For
 
-**Smart India Hackathon (SIH)** — addressing the challenge of digitizing India's grassroots health infrastructure. ASHA workers operate in low-connectivity rural environments; the app is designed with offline resilience and an intuitive UI for field use.
+**Smart India Hackathon (SIH)** — addressing the challenge of digitizing India's grassroots health infrastructure.
 
 ---
 
@@ -157,4 +119,6 @@ MIT © Macrovision
 
 ---
 
-*Built with ❤️ for India's health workers*
+<p align="center">
+  <b>Built with ❤️ for India's 1.4 million ASHA workers</b>
+</p>
