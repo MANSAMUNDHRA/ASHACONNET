@@ -1,7 +1,5 @@
 # ASHAConnect — PHC Management System for Rural India
 
-[![Made in India](https://img.shields.io/badge/Made%20in-India-green)](https://india.gov.in)
-[![Smart India Hackathon](https://img.shields.io/badge/SIH-2024-orange)](https://www.sih.gov.in)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Download APK](https://img.shields.io/badge/Download-APK-brightgreen)](app-release.apk)
 
