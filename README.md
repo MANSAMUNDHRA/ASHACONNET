@@ -1,7 +1,5 @@
 # ASHAConnect — PHC Management System for Rural India
 
-[![Made in India](https://img.shields.io/badge/Made%20in-India-green)](https://india.gov.in)
-[![Smart India Hackathon](https://img.shields.io/badge/SIH-2024-orange)](https://www.sih.gov.in)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Download APK](https://img.shields.io/badge/Download-APK-brightgreen)](app-release.apk)
 
@@ -75,6 +73,21 @@ Built for India's inconsistent networks:
 - ✅ Firebase Realtime Database listeners ensure instant updates across all devices when online
 
 ---
+
+## 📺 Demo Video
+
+[![ASHAconnect Demo](https://img.youtube.com/vi/bmskVmVTu5M/0.jpg)](https://youtu.be/bmskVmVTu5M)
+
+**Watch the full demo:** [ASHAconnect – PHC Management System Demo](https://youtu.be/bmskVmVTu5M)
+
+The video demonstrates:
+- ✅ Role-based dashboards for ASHA workers, doctors, and admins
+- ✅ Patient registration with pregnancy tracking
+- ✅ Real-time Firebase sync across devices
+- ✅ Offline-first functionality
+
+---
+
 
 ## Quick Setup
 
